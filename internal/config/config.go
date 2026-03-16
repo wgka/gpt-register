@@ -71,7 +71,7 @@ var settingDefinitions = []SettingDefinition{
 	{
 		Name:         "app_name",
 		DBKey:        "app.name",
-		DefaultValue: "OpenAI/Codex CLI 自动注册系统",
+		DefaultValue: "OpenAI/GPT 自动注册系统",
 		Category:     CategoryGeneral,
 		Type:         ValueString,
 		Description:  "应用名称",
@@ -164,7 +164,7 @@ func Load() Settings {
 	loadDotEnv(".env")
 
 	settings := Settings{
-		AppName:          "OpenAI/Codex CLI 自动注册系统",
+		AppName:          "OpenAI/GPT 自动注册系统",
 		AppVersion:       "2.0.0",
 		Debug:            false,
 		DatabaseURL:      "data/database.db",

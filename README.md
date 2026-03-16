@@ -1,4 +1,4 @@
-# codex-register
+# gpt-register
 
 一个带 Web UI 的自动注册/批量注册工具（Go 后端 + Vue 前端），并可选集成 Telegram 机器人在 TG 里触发注册并实时回传日志。
 
@@ -44,4 +44,3 @@ TG 命令：
 - Linux x64：`codex-register-linux-x64`
 
 工作流文件：`.github/workflows/build.yml`
-

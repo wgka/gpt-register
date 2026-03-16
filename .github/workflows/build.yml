@@ -97,7 +97,7 @@ jobs:
           files: release/*
           generate_release_notes: true
           body: |
-            ## OpenAI/Codex CLI 自动注册系统
+            ## OpenAI/GPT 自动注册系统
 
             ### 下载说明
             | 平台 | 文件 |

@@ -65,7 +65,7 @@ async function startRegistration() {
                 concurrency: form.concurrency,
                 interval_min: form.interval_min,
                 interval_max: form.interval_max,
-                email_service_type: 'meteormail',
+                email_service_type: 'tempmail',
             }),
         });
         if (!response.ok) {

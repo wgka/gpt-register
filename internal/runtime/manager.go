@@ -447,8 +447,8 @@ func (m *TaskManager) selectEmailService(ctx context.Context, request StartReque
 	_ = ctx
 
 	switch strings.TrimSpace(request.EmailServiceType) {
-	case "", "meteormail":
-		return newMeteormailService(strings.TrimSpace(request.Proxy)), nil, nil
+	case "", "tempmail", "temp-email", "meteormail":
+		return newTempMailService(strings.TrimSpace(request.Proxy)), nil, nil
 	default:
 		return nil, nil, fmt.Errorf("unsupported email service type: %s", request.EmailServiceType)
 	}

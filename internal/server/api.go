@@ -111,7 +111,7 @@ func apiRoutes(cfg config.Settings, api *apiServer) http.Handler {
 				},
 				{
 					Title:       "业务模块",
-					Description: "注册链路与邮箱接口已切到 Go，当前统一使用 MeteorMail 单服务模式。",
+					Description: "注册链路与邮箱接口已切到 Go，当前统一使用临时邮箱 API 模式。",
 					Status:      "in_progress",
 				},
 			},

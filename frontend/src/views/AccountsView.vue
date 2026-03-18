@@ -391,7 +391,7 @@ const statusOptions = [
   { label: '失败', value: 'failed' },
 ]
 
-const serviceOptions = [{ label: 'MeteorMail', value: 'meteormail' }]
+const serviceOptions = [{ label: '临时邮箱', value: 'tempmail' }]
 
 async function refreshAll() {
   loading.value = true
@@ -645,8 +645,8 @@ function statusTagType(status: string) {
 }
 
 function serviceLabel(service: string) {
-  if (service === 'meteormail') {
-    return 'MeteorMail'
+  if (service === 'tempmail' || service === 'temp-email' || service === 'meteormail') {
+    return '临时邮箱'
   }
   return service || '-'
 }

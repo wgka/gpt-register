@@ -74,7 +74,7 @@ func GenerateBindCardLink(ctx context.Context, accessToken, proxyURL string) (st
 	_ = json.Unmarshal(respBody, &data)
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		return "", fmt.Errorf(resolveCheckoutError(data, resp.StatusCode))
+		return "", fmt.Errorf("%s", resolveCheckoutError(data, resp.StatusCode))
 	}
 
 	checkoutURL := resolveCheckoutURL(data)

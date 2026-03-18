@@ -9,6 +9,7 @@
 2) 配置环境变量
 
 - 复制 `.env.example` 为 `.env`，按需填写
+- 注册邮箱默认走临时邮箱 API，可通过 `TEMP_MAIL_API_BASE_URL` 覆盖地址
 
 3) 构建前端并运行服务
 

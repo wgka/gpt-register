@@ -255,16 +255,60 @@
           <el-divider content-position="left">Token 摘要</el-divider>
           <div class="token-grid">
             <div class="token-card">
-              <span class="detail-item__label">Access Token</span>
-              <code>{{ selectedTokens.access_token || '-' }}</code>
+              <div class="token-card__header">
+                <span class="detail-item__label">Access Token</span>
+                <el-button
+                  link
+                  type="primary"
+                  :disabled="!selectedTokens.access_token"
+                  @click="copyValue(selectedTokens.access_token, 'Access Token')"
+                >
+                  复制
+                </el-button>
+              </div>
+              <code>{{ selectedTokens.access_token_summary || '-' }}</code>
             </div>
             <div class="token-card">
-              <span class="detail-item__label">Refresh Token</span>
-              <code>{{ selectedTokens.refresh_token || '-' }}</code>
+              <div class="token-card__header">
+                <span class="detail-item__label">Refresh Token</span>
+                <el-button
+                  link
+                  type="primary"
+                  :disabled="!selectedTokens.refresh_token"
+                  @click="copyValue(selectedTokens.refresh_token, 'Refresh Token')"
+                >
+                  复制
+                </el-button>
+              </div>
+              <code>{{ selectedTokens.refresh_token_summary || '-' }}</code>
             </div>
             <div class="token-card">
-              <span class="detail-item__label">ID Token</span>
-              <code>{{ selectedTokens.id_token || '-' }}</code>
+              <div class="token-card__header">
+                <span class="detail-item__label">ID Token</span>
+                <el-button
+                  link
+                  type="primary"
+                  :disabled="!selectedTokens.id_token"
+                  @click="copyValue(selectedTokens.id_token, 'ID Token')"
+                >
+                  复制
+                </el-button>
+              </div>
+              <code>{{ selectedTokens.id_token_summary || '-' }}</code>
+            </div>
+            <div class="token-card">
+              <div class="token-card__header">
+                <span class="detail-item__label">绑卡链接</span>
+                <el-button
+                  link
+                  type="primary"
+                  :disabled="!selectedTokens.bind_card_url"
+                  @click="copyValue(selectedTokens.bind_card_url, '绑卡链接')"
+                >
+                  复制
+                </el-button>
+              </div>
+              <code>{{ selectedTokens.bind_card_url_summary || '-' }}</code>
             </div>
           </div>
         </template>
@@ -304,8 +348,13 @@ type AccountStats = {
 
 type AccountTokens = {
   access_token?: string | null
+  access_token_summary?: string | null
   refresh_token?: string | null
+  refresh_token_summary?: string | null
   id_token?: string | null
+  id_token_summary?: string | null
+  bind_card_url?: string | null
+  bind_card_url_summary?: string | null
   has_tokens?: boolean
 }
 
@@ -499,6 +548,38 @@ async function runBatchAction(action: BatchAction) {
   } finally {
     batchAction.value = ''
   }
+}
+
+async function copyValue(value: string | null | undefined, label: string) {
+  const trimmed = value?.trim()
+  if (!trimmed) {
+    ElMessage.warning(`${label} 不可复制`)
+    return
+  }
+
+  try {
+    await writeClipboard(trimmed)
+    ElMessage.success(`${label} 已复制`)
+  } catch {
+    ElMessage.error(`${label} 复制失败`)
+  }
+}
+
+async function writeClipboard(value: string) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value)
+    return
+  }
+
+  const textarea = document.createElement('textarea')
+  textarea.value = value
+  textarea.setAttribute('readonly', 'true')
+  textarea.style.position = 'fixed'
+  textarea.style.opacity = '0'
+  document.body.appendChild(textarea)
+  textarea.select()
+  document.execCommand('copy')
+  document.body.removeChild(textarea)
 }
 
 function applyFilters() {
@@ -729,6 +810,13 @@ onMounted(() => {
   padding: 14px;
   border-radius: 14px;
   background: #f8fafc;
+}
+
+.token-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .token-card code {

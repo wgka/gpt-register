@@ -29,6 +29,8 @@ const (
 	otpPattern               = `\b(\d{6})\b`
 )
 
+var checkoutSessionPattern = regexp.MustCompile(`/checkout/openai_llc/([A-Za-z0-9_-]+)`)
+
 type engineSettings struct {
 	OpenAIClientID        string
 	OpenAIAuthURL         string
@@ -49,6 +51,7 @@ type RegistrationResult struct {
 	RefreshToken string         `json:"refresh_token,omitempty"`
 	IDToken      string         `json:"id_token,omitempty"`
 	SessionToken string         `json:"session_token,omitempty"`
+	BindCardURL  string         `json:"bind_card_url,omitempty"`
 	ErrorMessage string         `json:"error_message,omitempty"`
 	Metadata     map[string]any `json:"metadata,omitempty"`
 	Source       string         `json:"source"`
@@ -234,11 +237,24 @@ func (e *registrationEngine) run(ctx context.Context) RegistrationResult {
 	result.IDToken = tokenInfo.IDToken
 	result.Password = e.password
 	result.SessionToken = e.getCookieValue("https://chatgpt.com", "__Secure-next-auth.session-token")
+
+	e.logf("生成绑卡链接")
+	bindCardURL, err := GenerateBindCardLink(ctx, tokenInfo.AccessToken, e.proxyURL)
+	if err != nil {
+		e.logf("绑卡链接生成失败: " + err.Error())
+	} else {
+		result.BindCardURL = bindCardURL
+		e.logf("绑卡链接已生成")
+	}
+
 	result.Metadata = map[string]any{
 		"email_service":       e.service.Type(),
 		"proxy_used":          e.proxyURL,
 		"registered_at":       time.Now().Format(time.RFC3339),
 		"is_existing_account": e.isExisting,
+	}
+	if result.BindCardURL != "" {
+		result.Metadata["bind_card_url"] = result.BindCardURL
 	}
 	e.logf("注册流程完成")
 

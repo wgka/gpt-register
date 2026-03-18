@@ -36,16 +36,18 @@ type Account struct {
 }
 
 type AccountTokens struct {
-	ID           int     `json:"id"`
-	Email        string  `json:"email"`
-	ClientID     *string `json:"client_id,omitempty"`
-	AccessToken  *string `json:"access_token,omitempty"`
-	RefreshToken *string `json:"refresh_token,omitempty"`
-	IDToken      *string `json:"id_token,omitempty"`
-	SessionToken *string `json:"session_token,omitempty"`
-	LastRefresh  string  `json:"last_refresh,omitempty"`
-	ExpiresAt    string  `json:"expires_at,omitempty"`
-	AccountID    *string `json:"account_id,omitempty"`
+	ID           int            `json:"id"`
+	Email        string         `json:"email"`
+	ClientID     *string        `json:"client_id,omitempty"`
+	AccessToken  *string        `json:"access_token,omitempty"`
+	RefreshToken *string        `json:"refresh_token,omitempty"`
+	IDToken      *string        `json:"id_token,omitempty"`
+	SessionToken *string        `json:"session_token,omitempty"`
+	LastRefresh  string         `json:"last_refresh,omitempty"`
+	ExpiresAt    string         `json:"expires_at,omitempty"`
+	AccountID    *string        `json:"account_id,omitempty"`
+	ProxyUsed    *string        `json:"proxy_used,omitempty"`
+	ExtraData    map[string]any `json:"extra_data,omitempty"`
 }
 
 type AccountCreate struct {
@@ -258,7 +260,9 @@ SELECT
 	session_token,
 	last_refresh,
 	expires_at,
-	account_id
+	account_id,
+	proxy_used,
+	extra_data
 FROM accounts
 WHERE id = ?`
 
@@ -560,6 +564,8 @@ func scanAccountTokens(row scanner) (AccountTokens, error) {
 		lastRefresh  sql.NullString
 		expiresAt    sql.NullString
 		accountID    sql.NullString
+		proxyUsed    sql.NullString
+		extraData    sql.NullString
 	)
 
 	err := row.Scan(
@@ -573,6 +579,8 @@ func scanAccountTokens(row scanner) (AccountTokens, error) {
 		&lastRefresh,
 		&expiresAt,
 		&accountID,
+		&proxyUsed,
+		&extraData,
 	)
 	if err != nil {
 		return AccountTokens{}, err
@@ -586,7 +594,20 @@ func scanAccountTokens(row scanner) (AccountTokens, error) {
 	account.LastRefresh = normalizeTimestamp(lastRefresh)
 	account.ExpiresAt = normalizeTimestamp(expiresAt)
 	account.AccountID = nullableString(accountID)
+	account.ProxyUsed = nullableString(proxyUsed)
+	account.ExtraData = parseExtraData(extraData)
 	return account, nil
+}
+
+func parseExtraData(value sql.NullString) map[string]any {
+	result := map[string]any{}
+	if !value.Valid || strings.TrimSpace(value.String) == "" {
+		return result
+	}
+	if err := json.Unmarshal([]byte(value.String), &result); err != nil {
+		return map[string]any{}
+	}
+	return result
 }
 
 func nullableString(value sql.NullString) *string {

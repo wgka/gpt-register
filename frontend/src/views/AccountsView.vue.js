@@ -171,6 +171,35 @@ async function runBatchAction(action) {
         batchAction.value = '';
     }
 }
+async function copyValue(value, label) {
+    const trimmed = value?.trim();
+    if (!trimmed) {
+        ElMessage.warning(`${label} 不可复制`);
+        return;
+    }
+    try {
+        await writeClipboard(trimmed);
+        ElMessage.success(`${label} 已复制`);
+    }
+    catch {
+        ElMessage.error(`${label} 复制失败`);
+    }
+}
+async function writeClipboard(value) {
+    if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+        return;
+    }
+    const textarea = document.createElement('textarea');
+    textarea.value = value;
+    textarea.setAttribute('readonly', 'true');
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+}
 function applyFilters() {
     filters.page = 1;
     refreshAll();
@@ -1306,35 +1335,181 @@ if (__VLS_ctx.selectedAccount) {
         ...{ class: "token-card" },
     });
     /** @type {__VLS_StyleScopedClasses['token-card']} */ ;
+    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+        ...{ class: "token-card__header" },
+    });
+    /** @type {__VLS_StyleScopedClasses['token-card__header']} */ ;
     __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
         ...{ class: "detail-item__label" },
     });
     /** @type {__VLS_StyleScopedClasses['detail-item__label']} */ ;
+    let __VLS_262;
+    /** @ts-ignore @type {typeof __VLS_components.elButton | typeof __VLS_components.ElButton | typeof __VLS_components.elButton | typeof __VLS_components.ElButton} */
+    elButton;
+    // @ts-ignore
+    const __VLS_263 = __VLS_asFunctionalComponent1(__VLS_262, new __VLS_262({
+        ...{ 'onClick': {} },
+        link: true,
+        type: "primary",
+        disabled: (!__VLS_ctx.selectedTokens.access_token),
+    }));
+    const __VLS_264 = __VLS_263({
+        ...{ 'onClick': {} },
+        link: true,
+        type: "primary",
+        disabled: (!__VLS_ctx.selectedTokens.access_token),
+    }, ...__VLS_functionalComponentArgsRest(__VLS_263));
+    let __VLS_267;
+    const __VLS_268 = ({ click: {} },
+        { onClick: (...[$event]) => {
+                if (!(__VLS_ctx.selectedAccount))
+                    return;
+                __VLS_ctx.copyValue(__VLS_ctx.selectedTokens.access_token, 'Access Token');
+                // @ts-ignore
+                [selectedTokens, selectedTokens, copyValue,];
+            } });
+    const { default: __VLS_269 } = __VLS_265.slots;
+    // @ts-ignore
+    [];
+    var __VLS_265;
+    var __VLS_266;
     __VLS_asFunctionalElement1(__VLS_intrinsics.code, __VLS_intrinsics.code)({});
-    (__VLS_ctx.selectedTokens.access_token || '-');
+    (__VLS_ctx.selectedTokens.access_token_summary || '-');
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
         ...{ class: "token-card" },
     });
     /** @type {__VLS_StyleScopedClasses['token-card']} */ ;
+    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+        ...{ class: "token-card__header" },
+    });
+    /** @type {__VLS_StyleScopedClasses['token-card__header']} */ ;
     __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
         ...{ class: "detail-item__label" },
     });
     /** @type {__VLS_StyleScopedClasses['detail-item__label']} */ ;
+    let __VLS_270;
+    /** @ts-ignore @type {typeof __VLS_components.elButton | typeof __VLS_components.ElButton | typeof __VLS_components.elButton | typeof __VLS_components.ElButton} */
+    elButton;
+    // @ts-ignore
+    const __VLS_271 = __VLS_asFunctionalComponent1(__VLS_270, new __VLS_270({
+        ...{ 'onClick': {} },
+        link: true,
+        type: "primary",
+        disabled: (!__VLS_ctx.selectedTokens.refresh_token),
+    }));
+    const __VLS_272 = __VLS_271({
+        ...{ 'onClick': {} },
+        link: true,
+        type: "primary",
+        disabled: (!__VLS_ctx.selectedTokens.refresh_token),
+    }, ...__VLS_functionalComponentArgsRest(__VLS_271));
+    let __VLS_275;
+    const __VLS_276 = ({ click: {} },
+        { onClick: (...[$event]) => {
+                if (!(__VLS_ctx.selectedAccount))
+                    return;
+                __VLS_ctx.copyValue(__VLS_ctx.selectedTokens.refresh_token, 'Refresh Token');
+                // @ts-ignore
+                [selectedTokens, selectedTokens, selectedTokens, copyValue,];
+            } });
+    const { default: __VLS_277 } = __VLS_273.slots;
+    // @ts-ignore
+    [];
+    var __VLS_273;
+    var __VLS_274;
     __VLS_asFunctionalElement1(__VLS_intrinsics.code, __VLS_intrinsics.code)({});
-    (__VLS_ctx.selectedTokens.refresh_token || '-');
+    (__VLS_ctx.selectedTokens.refresh_token_summary || '-');
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
         ...{ class: "token-card" },
     });
     /** @type {__VLS_StyleScopedClasses['token-card']} */ ;
+    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+        ...{ class: "token-card__header" },
+    });
+    /** @type {__VLS_StyleScopedClasses['token-card__header']} */ ;
     __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
         ...{ class: "detail-item__label" },
     });
     /** @type {__VLS_StyleScopedClasses['detail-item__label']} */ ;
+    let __VLS_278;
+    /** @ts-ignore @type {typeof __VLS_components.elButton | typeof __VLS_components.ElButton | typeof __VLS_components.elButton | typeof __VLS_components.ElButton} */
+    elButton;
+    // @ts-ignore
+    const __VLS_279 = __VLS_asFunctionalComponent1(__VLS_278, new __VLS_278({
+        ...{ 'onClick': {} },
+        link: true,
+        type: "primary",
+        disabled: (!__VLS_ctx.selectedTokens.id_token),
+    }));
+    const __VLS_280 = __VLS_279({
+        ...{ 'onClick': {} },
+        link: true,
+        type: "primary",
+        disabled: (!__VLS_ctx.selectedTokens.id_token),
+    }, ...__VLS_functionalComponentArgsRest(__VLS_279));
+    let __VLS_283;
+    const __VLS_284 = ({ click: {} },
+        { onClick: (...[$event]) => {
+                if (!(__VLS_ctx.selectedAccount))
+                    return;
+                __VLS_ctx.copyValue(__VLS_ctx.selectedTokens.id_token, 'ID Token');
+                // @ts-ignore
+                [selectedTokens, selectedTokens, selectedTokens, copyValue,];
+            } });
+    const { default: __VLS_285 } = __VLS_281.slots;
+    // @ts-ignore
+    [];
+    var __VLS_281;
+    var __VLS_282;
     __VLS_asFunctionalElement1(__VLS_intrinsics.code, __VLS_intrinsics.code)({});
-    (__VLS_ctx.selectedTokens.id_token || '-');
+    (__VLS_ctx.selectedTokens.id_token_summary || '-');
+    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+        ...{ class: "token-card" },
+    });
+    /** @type {__VLS_StyleScopedClasses['token-card']} */ ;
+    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+        ...{ class: "token-card__header" },
+    });
+    /** @type {__VLS_StyleScopedClasses['token-card__header']} */ ;
+    __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
+        ...{ class: "detail-item__label" },
+    });
+    /** @type {__VLS_StyleScopedClasses['detail-item__label']} */ ;
+    let __VLS_286;
+    /** @ts-ignore @type {typeof __VLS_components.elButton | typeof __VLS_components.ElButton | typeof __VLS_components.elButton | typeof __VLS_components.ElButton} */
+    elButton;
+    // @ts-ignore
+    const __VLS_287 = __VLS_asFunctionalComponent1(__VLS_286, new __VLS_286({
+        ...{ 'onClick': {} },
+        link: true,
+        type: "primary",
+        disabled: (!__VLS_ctx.selectedTokens.bind_card_url),
+    }));
+    const __VLS_288 = __VLS_287({
+        ...{ 'onClick': {} },
+        link: true,
+        type: "primary",
+        disabled: (!__VLS_ctx.selectedTokens.bind_card_url),
+    }, ...__VLS_functionalComponentArgsRest(__VLS_287));
+    let __VLS_291;
+    const __VLS_292 = ({ click: {} },
+        { onClick: (...[$event]) => {
+                if (!(__VLS_ctx.selectedAccount))
+                    return;
+                __VLS_ctx.copyValue(__VLS_ctx.selectedTokens.bind_card_url, '绑卡链接');
+                // @ts-ignore
+                [selectedTokens, selectedTokens, selectedTokens, copyValue,];
+            } });
+    const { default: __VLS_293 } = __VLS_289.slots;
+    // @ts-ignore
+    [];
+    var __VLS_289;
+    var __VLS_290;
+    __VLS_asFunctionalElement1(__VLS_intrinsics.code, __VLS_intrinsics.code)({});
+    (__VLS_ctx.selectedTokens.bind_card_url_summary || '-');
 }
 // @ts-ignore
-[selectedTokens, selectedTokens, selectedTokens,];
+[selectedTokens,];
 var __VLS_223;
 // @ts-ignore
 [];

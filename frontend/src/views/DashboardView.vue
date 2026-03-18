@@ -50,6 +50,39 @@
             </el-button>
           </div>
         </el-form>
+
+        <el-divider content-position="left">最近成功账号</el-divider>
+        <div v-if="recentResults.length === 0" class="result-empty">
+          注册成功后会在这里显示绑卡链接，支持直接复制。
+        </div>
+        <div v-else class="result-list">
+          <article v-for="item in recentResults" :key="item.task_uuid" class="result-card">
+            <div class="result-card__header">
+              <div>
+                <strong>{{ item.email }}</strong>
+                <p class="result-card__meta">
+                  {{ item.source === 'login' ? '已存在账号登录' : '新注册账号' }}
+                </p>
+              </div>
+              <el-button
+                link
+                type="primary"
+                :disabled="!item.bind_card_url"
+                @click="copyValue(item.bind_card_url, '绑卡链接')"
+              >
+                复制链接
+              </el-button>
+            </div>
+            <div class="result-row">
+              <span class="result-row__label">绑卡链接</span>
+              <code>{{ item.bind_card_url_summary || '-' }}</code>
+            </div>
+            <div class="result-row result-row--meta">
+              <span>账号 ID {{ item.account_id || '-' }}</span>
+              <span>工作区 {{ item.workspace_id || '-' }}</span>
+            </div>
+          </article>
+        </div>
       </el-card>
 
       <el-card class="page-card log-card" shadow="never">
@@ -107,11 +140,22 @@ type BatchResponse = {
 }
 
 type TaskEvent = {
-  type: 'status' | 'log'
+  type: 'status' | 'log' | 'result'
   batch_id?: string
+  task_uuid?: string
   status?: string
   message?: string
   extra?: Record<string, unknown>
+}
+
+type RecentRegistrationResult = {
+  task_uuid: string
+  email: string
+  account_id: string
+  workspace_id: string
+  source: string
+  bind_card_url: string
+  bind_card_url_summary: string
 }
 
 const loading = ref(false)
@@ -119,6 +163,7 @@ const starting = ref(false)
 const socket = ref<WebSocket | null>(null)
 const websocketState = ref('未连接')
 const logs = ref<string[]>([])
+const recentResults = ref<RecentRegistrationResult[]>([])
 const activeBatchID = ref('')
 const registrationStats = reactive<RegistrationStats>({
   by_status: {},
@@ -169,6 +214,7 @@ async function startRegistration() {
   try {
     resetCurrent()
     logs.value = []
+    recentResults.value = []
 
     const response = await fetch('/api/registration/batch', {
       method: 'POST',
@@ -250,11 +296,40 @@ function applyEvent(payload: TaskEvent) {
 
   if (payload.type === 'log' && payload.message) {
     appendLog(payload.message)
+    return
+  }
+
+  if (payload.type === 'result') {
+    const result = normalizeRecentResult(payload)
+    if (!result) {
+      return
+    }
+
+    recentResults.value = [result, ...recentResults.value.filter((item) => item.task_uuid !== result.task_uuid)].slice(0, 8)
   }
 }
 
 function appendLog(message: string) {
   logs.value = [...logs.value, message].slice(-400)
+}
+
+function normalizeRecentResult(payload: TaskEvent): RecentRegistrationResult | null {
+  const extra = payload.extra ?? {}
+  const taskUUID = asString(extra.task_uuid) || payload.task_uuid || `${Date.now()}`
+  const email = asString(extra.email)
+  if (!email) {
+    return null
+  }
+
+  return {
+    task_uuid: taskUUID,
+    email,
+    account_id: asString(extra.account_id),
+    workspace_id: asString(extra.workspace_id),
+    source: asString(extra.source) || 'register',
+    bind_card_url: asString(extra.bind_card_url),
+    bind_card_url_summary: asString(extra.bind_card_url_summary),
+  }
 }
 
 function cancelRegistration() {
@@ -303,6 +378,42 @@ function isTerminalStatus(status: string) {
 
 function asNumber(value: unknown, fallback: number) {
   return typeof value === 'number' ? value : fallback
+}
+
+function asString(value: unknown) {
+  return typeof value === 'string' ? value : ''
+}
+
+async function copyValue(value: string, label: string) {
+  const trimmed = value.trim()
+  if (!trimmed) {
+    ElMessage.warning(`${label} 不可复制`)
+    return
+  }
+
+  try {
+    await writeClipboard(trimmed)
+    ElMessage.success(`${label} 已复制`)
+  } catch {
+    ElMessage.error(`${label} 复制失败`)
+  }
+}
+
+async function writeClipboard(value: string) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value)
+    return
+  }
+
+  const textarea = document.createElement('textarea')
+  textarea.value = value
+  textarea.setAttribute('readonly', 'true')
+  textarea.style.position = 'fixed'
+  textarea.style.opacity = '0'
+  document.body.appendChild(textarea)
+  textarea.select()
+  document.execCommand('copy')
+  document.body.removeChild(textarea)
 }
 
 const canCancel = computed(() => current.status === 'running' || current.status === 'cancelling')
@@ -385,6 +496,65 @@ onBeforeUnmount(() => {
 .launch-form {
   display: grid;
   gap: 18px;
+}
+
+.result-empty {
+  padding: 18px 16px;
+  border-radius: 16px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.result-list {
+  display: grid;
+  gap: 12px;
+}
+
+.result-card {
+  display: grid;
+  gap: 10px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.96) 0%, rgba(241, 245, 249, 0.96) 100%);
+}
+
+.result-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.result-card__meta {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.result-row {
+  display: grid;
+  gap: 6px;
+}
+
+.result-row__label {
+  color: #52606d;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.result-row code {
+  font-size: 12px;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+
+.result-row--meta {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  color: #64748b;
+  font-size: 12px;
 }
 
 .launch-card :deep(.el-card__header),
@@ -497,7 +667,8 @@ onBeforeUnmount(() => {
   .hero,
   .section-header,
   .status-bar,
-  .form-actions {
+  .form-actions,
+  .result-card__header {
     flex-direction: column;
     align-items: flex-start;
   }
@@ -508,6 +679,10 @@ onBeforeUnmount(() => {
 
   .hero__title {
     font-size: 28px;
+  }
+
+  .result-row--meta {
+    grid-template-columns: 1fr;
   }
 }
 </style>

@@ -76,13 +76,31 @@ func (a *apiServer) handleAccountTokens(w http.ResponseWriter, req *http.Request
 		return
 	}
 
+	bindCardURL := accountExtraString(account.ExtraData, "bind_card_url")
+	if bindCardURL == "" && account.AccessToken != nil {
+		generatedURL, err := runtime.GenerateBindCardLink(req.Context(), *account.AccessToken, pointerValue(account.ProxyUsed))
+		if err == nil && generatedURL != "" {
+			bindCardURL = generatedURL
+			mergedExtra := cloneExtraData(account.ExtraData)
+			mergedExtra["bind_card_url"] = generatedURL
+			if updateErr := a.store.UpdateAccount(req.Context(), accountID, map[string]any{"extra_data": mergedExtra}); updateErr == nil {
+				account.ExtraData = mergedExtra
+			}
+		}
+	}
+
 	writeJSON(w, http.StatusOK, map[string]any{
-		"id":            account.ID,
-		"email":         account.Email,
-		"access_token":  truncateToken(account.AccessToken),
-		"refresh_token": truncateToken(account.RefreshToken),
-		"id_token":      truncateToken(account.IDToken),
-		"has_tokens":    account.AccessToken != nil && account.RefreshToken != nil,
+		"id":                    account.ID,
+		"email":                 account.Email,
+		"access_token":          pointerValue(account.AccessToken),
+		"access_token_summary":  truncateValue(pointerValue(account.AccessToken), 50),
+		"refresh_token":         pointerValue(account.RefreshToken),
+		"refresh_token_summary": truncateValue(pointerValue(account.RefreshToken), 50),
+		"id_token":              pointerValue(account.IDToken),
+		"id_token_summary":      truncateValue(pointerValue(account.IDToken), 50),
+		"bind_card_url":         bindCardURL,
+		"bind_card_url_summary": truncateValue(bindCardURL, 72),
+		"has_tokens":            account.AccessToken != nil && account.RefreshToken != nil,
 	})
 }
 
@@ -276,11 +294,49 @@ func (a *apiServer) handleBatchCPAUpload(w http.ResponseWriter, req *http.Reques
 }
 
 func truncateToken(value *string) any {
-	if value == nil || strings.TrimSpace(*value) == "" {
+	if value == nil {
 		return nil
 	}
-	if len(*value) <= 50 {
-		return *value
+	trimmed := strings.TrimSpace(*value)
+	if trimmed == "" {
+		return nil
 	}
-	return (*value)[:50] + "..."
+	return truncateValue(trimmed, 50)
+}
+
+func truncateValue(value string, keep int) any {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return nil
+	}
+	if keep < 16 {
+		keep = 16
+	}
+	if len(trimmed) <= keep {
+		return trimmed
+	}
+	return trimmed[:keep] + "..."
+}
+
+func accountExtraString(extra map[string]any, key string) string {
+	if len(extra) == 0 {
+		return ""
+	}
+	value, _ := extra[key].(string)
+	return strings.TrimSpace(value)
+}
+
+func cloneExtraData(extra map[string]any) map[string]any {
+	result := map[string]any{}
+	for key, value := range extra {
+		result[key] = value
+	}
+	return result
+}
+
+func pointerValue(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return strings.TrimSpace(*value)
 }

@@ -411,6 +411,24 @@ func (m *TaskManager) runTask(ctx context.Context, batchID, taskUUID string, req
 		}
 	}
 
+	resultExtra := buildRegistrationResultEvent(taskUUID, accountID, result)
+	m.publishTaskEvent(taskUUID, TaskEvent{
+		Type:      "result",
+		TaskUUID:  taskUUID,
+		BatchID:   batchID,
+		Timestamp: time.Now().Format(time.RFC3339),
+		Extra:     resultExtra,
+	})
+	if strings.TrimSpace(batchID) != "" {
+		m.publishBatchEvent(batchID, TaskEvent{
+			Type:      "result",
+			TaskUUID:  taskUUID,
+			BatchID:   batchID,
+			Timestamp: time.Now().Format(time.RFC3339),
+			Extra:     resultExtra,
+		})
+	}
+
 	_, _ = m.db.UpdateRegistrationTask(context.Background(), taskUUID, map[string]any{
 		"status":       "completed",
 		"completed_at": time.Now().Format(time.RFC3339),
@@ -515,6 +533,38 @@ func randInt(n int) int {
 		return 0
 	}
 	return int(time.Now().UnixNano() % int64(n))
+}
+
+func buildRegistrationResultEvent(taskUUID string, accountDBID int, result RegistrationResult) map[string]any {
+	extra := map[string]any{
+		"task_uuid":    taskUUID,
+		"email":        result.Email,
+		"account_id":   result.AccountID,
+		"workspace_id": result.WorkspaceID,
+		"source":       result.Source,
+	}
+	if accountDBID > 0 {
+		extra["account_db_id"] = accountDBID
+	}
+	if strings.TrimSpace(result.BindCardURL) != "" {
+		extra["bind_card_url"] = result.BindCardURL
+		extra["bind_card_url_summary"] = summarizeValue(result.BindCardURL, 88)
+	}
+	return extra
+}
+
+func summarizeValue(value string, keep int) string {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return ""
+	}
+	if keep < 16 {
+		keep = 16
+	}
+	if len(trimmed) <= keep {
+		return trimmed
+	}
+	return trimmed[:keep] + "..."
 }
 
 func maskProxyForLog(proxyURL string) string {

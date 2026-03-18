@@ -5,6 +5,7 @@ const starting = ref(false);
 const socket = ref(null);
 const websocketState = ref('未连接');
 const logs = ref([]);
+const recentResults = ref([]);
 const activeBatchID = ref('');
 const registrationStats = reactive({
     by_status: {},
@@ -53,6 +54,7 @@ async function startRegistration() {
     try {
         resetCurrent();
         logs.value = [];
+        recentResults.value = [];
         const response = await fetch('/api/registration/batch', {
             method: 'POST',
             headers: {
@@ -124,10 +126,35 @@ function applyEvent(payload) {
     }
     if (payload.type === 'log' && payload.message) {
         appendLog(payload.message);
+        return;
+    }
+    if (payload.type === 'result') {
+        const result = normalizeRecentResult(payload);
+        if (!result) {
+            return;
+        }
+        recentResults.value = [result, ...recentResults.value.filter((item) => item.task_uuid !== result.task_uuid)].slice(0, 8);
     }
 }
 function appendLog(message) {
     logs.value = [...logs.value, message].slice(-400);
+}
+function normalizeRecentResult(payload) {
+    const extra = payload.extra ?? {};
+    const taskUUID = asString(extra.task_uuid) || payload.task_uuid || `${Date.now()}`;
+    const email = asString(extra.email);
+    if (!email) {
+        return null;
+    }
+    return {
+        task_uuid: taskUUID,
+        email,
+        account_id: asString(extra.account_id),
+        workspace_id: asString(extra.workspace_id),
+        source: asString(extra.source) || 'register',
+        bind_card_url: asString(extra.bind_card_url),
+        bind_card_url_summary: asString(extra.bind_card_url_summary),
+    };
 }
 function cancelRegistration() {
     if (!socket.value) {
@@ -171,6 +198,38 @@ function isTerminalStatus(status) {
 function asNumber(value, fallback) {
     return typeof value === 'number' ? value : fallback;
 }
+function asString(value) {
+    return typeof value === 'string' ? value : '';
+}
+async function copyValue(value, label) {
+    const trimmed = value.trim();
+    if (!trimmed) {
+        ElMessage.warning(`${label} 不可复制`);
+        return;
+    }
+    try {
+        await writeClipboard(trimmed);
+        ElMessage.success(`${label} 已复制`);
+    }
+    catch {
+        ElMessage.error(`${label} 复制失败`);
+    }
+}
+async function writeClipboard(value) {
+    if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+        return;
+    }
+    const textarea = document.createElement('textarea');
+    textarea.value = value;
+    textarea.setAttribute('readonly', 'true');
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+}
 const canCancel = computed(() => current.status === 'running' || current.status === 'cancelling');
 const websocketTagType = computed(() => {
     switch (websocketState.value) {
@@ -197,6 +256,7 @@ const __VLS_ctx = {
 let __VLS_components;
 let __VLS_intrinsics;
 let __VLS_directives;
+/** @type {__VLS_StyleScopedClasses['result-row']} */ ;
 /** @type {__VLS_StyleScopedClasses['el-card__header']} */ ;
 /** @type {__VLS_StyleScopedClasses['launch-card']} */ ;
 /** @type {__VLS_StyleScopedClasses['log-card']} */ ;
@@ -214,8 +274,10 @@ let __VLS_directives;
 /** @type {__VLS_StyleScopedClasses['section-header']} */ ;
 /** @type {__VLS_StyleScopedClasses['status-bar']} */ ;
 /** @type {__VLS_StyleScopedClasses['form-actions']} */ ;
+/** @type {__VLS_StyleScopedClasses['result-card__header']} */ ;
 /** @type {__VLS_StyleScopedClasses['hero']} */ ;
 /** @type {__VLS_StyleScopedClasses['hero__title']} */ ;
+/** @type {__VLS_StyleScopedClasses['result-row--meta']} */ ;
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
     ...{ class: "dashboard" },
 });
@@ -515,26 +577,122 @@ var __VLS_85;
 [];
 var __VLS_24;
 var __VLS_25;
+let __VLS_89;
+/** @ts-ignore @type {typeof __VLS_components.elDivider | typeof __VLS_components.ElDivider | typeof __VLS_components.elDivider | typeof __VLS_components.ElDivider} */
+elDivider;
+// @ts-ignore
+const __VLS_90 = __VLS_asFunctionalComponent1(__VLS_89, new __VLS_89({
+    contentPosition: "left",
+}));
+const __VLS_91 = __VLS_90({
+    contentPosition: "left",
+}, ...__VLS_functionalComponentArgsRest(__VLS_90));
+const { default: __VLS_94 } = __VLS_92.slots;
+// @ts-ignore
+[];
+var __VLS_92;
+if (__VLS_ctx.recentResults.length === 0) {
+    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+        ...{ class: "result-empty" },
+    });
+    /** @type {__VLS_StyleScopedClasses['result-empty']} */ ;
+}
+else {
+    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+        ...{ class: "result-list" },
+    });
+    /** @type {__VLS_StyleScopedClasses['result-list']} */ ;
+    for (const [item] of __VLS_vFor((__VLS_ctx.recentResults))) {
+        __VLS_asFunctionalElement1(__VLS_intrinsics.article, __VLS_intrinsics.article)({
+            key: (item.task_uuid),
+            ...{ class: "result-card" },
+        });
+        /** @type {__VLS_StyleScopedClasses['result-card']} */ ;
+        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+            ...{ class: "result-card__header" },
+        });
+        /** @type {__VLS_StyleScopedClasses['result-card__header']} */ ;
+        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({});
+        __VLS_asFunctionalElement1(__VLS_intrinsics.strong, __VLS_intrinsics.strong)({});
+        (item.email);
+        __VLS_asFunctionalElement1(__VLS_intrinsics.p, __VLS_intrinsics.p)({
+            ...{ class: "result-card__meta" },
+        });
+        /** @type {__VLS_StyleScopedClasses['result-card__meta']} */ ;
+        (item.source === 'login' ? '已存在账号登录' : '新注册账号');
+        let __VLS_95;
+        /** @ts-ignore @type {typeof __VLS_components.elButton | typeof __VLS_components.ElButton | typeof __VLS_components.elButton | typeof __VLS_components.ElButton} */
+        elButton;
+        // @ts-ignore
+        const __VLS_96 = __VLS_asFunctionalComponent1(__VLS_95, new __VLS_95({
+            ...{ 'onClick': {} },
+            link: true,
+            type: "primary",
+            disabled: (!item.bind_card_url),
+        }));
+        const __VLS_97 = __VLS_96({
+            ...{ 'onClick': {} },
+            link: true,
+            type: "primary",
+            disabled: (!item.bind_card_url),
+        }, ...__VLS_functionalComponentArgsRest(__VLS_96));
+        let __VLS_100;
+        const __VLS_101 = ({ click: {} },
+            { onClick: (...[$event]) => {
+                    if (!!(__VLS_ctx.recentResults.length === 0))
+                        return;
+                    __VLS_ctx.copyValue(item.bind_card_url, '绑卡链接');
+                    // @ts-ignore
+                    [recentResults, recentResults, copyValue,];
+                } });
+        const { default: __VLS_102 } = __VLS_98.slots;
+        // @ts-ignore
+        [];
+        var __VLS_98;
+        var __VLS_99;
+        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+            ...{ class: "result-row" },
+        });
+        /** @type {__VLS_StyleScopedClasses['result-row']} */ ;
+        __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
+            ...{ class: "result-row__label" },
+        });
+        /** @type {__VLS_StyleScopedClasses['result-row__label']} */ ;
+        __VLS_asFunctionalElement1(__VLS_intrinsics.code, __VLS_intrinsics.code)({});
+        (item.bind_card_url_summary || '-');
+        __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+            ...{ class: "result-row result-row--meta" },
+        });
+        /** @type {__VLS_StyleScopedClasses['result-row']} */ ;
+        /** @type {__VLS_StyleScopedClasses['result-row--meta']} */ ;
+        __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({});
+        (item.account_id || '-');
+        __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({});
+        (item.workspace_id || '-');
+        // @ts-ignore
+        [];
+    }
+}
 // @ts-ignore
 [];
 var __VLS_11;
-let __VLS_89;
+let __VLS_103;
 /** @ts-ignore @type {typeof __VLS_components.elCard | typeof __VLS_components.ElCard | typeof __VLS_components.elCard | typeof __VLS_components.ElCard} */
 elCard;
 // @ts-ignore
-const __VLS_90 = __VLS_asFunctionalComponent1(__VLS_89, new __VLS_89({
+const __VLS_104 = __VLS_asFunctionalComponent1(__VLS_103, new __VLS_103({
     ...{ class: "page-card log-card" },
     shadow: "never",
 }));
-const __VLS_91 = __VLS_90({
+const __VLS_105 = __VLS_104({
     ...{ class: "page-card log-card" },
     shadow: "never",
-}, ...__VLS_functionalComponentArgsRest(__VLS_90));
+}, ...__VLS_functionalComponentArgsRest(__VLS_104));
 /** @type {__VLS_StyleScopedClasses['page-card']} */ ;
 /** @type {__VLS_StyleScopedClasses['log-card']} */ ;
-const { default: __VLS_94 } = __VLS_92.slots;
+const { default: __VLS_108 } = __VLS_106.slots;
 {
-    const { header: __VLS_95 } = __VLS_92.slots;
+    const { header: __VLS_109 } = __VLS_106.slots;
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
         ...{ class: "section-header" },
     });
@@ -547,36 +705,36 @@ const { default: __VLS_94 } = __VLS_92.slots;
         ...{ class: "status-bar" },
     });
     /** @type {__VLS_StyleScopedClasses['status-bar']} */ ;
-    let __VLS_96;
+    let __VLS_110;
     /** @ts-ignore @type {typeof __VLS_components.elTag | typeof __VLS_components.ElTag | typeof __VLS_components.elTag | typeof __VLS_components.ElTag} */
     elTag;
     // @ts-ignore
-    const __VLS_97 = __VLS_asFunctionalComponent1(__VLS_96, new __VLS_96({
+    const __VLS_111 = __VLS_asFunctionalComponent1(__VLS_110, new __VLS_110({
         type: (__VLS_ctx.statusTagType(__VLS_ctx.current.status)),
     }));
-    const __VLS_98 = __VLS_97({
+    const __VLS_112 = __VLS_111({
         type: (__VLS_ctx.statusTagType(__VLS_ctx.current.status)),
-    }, ...__VLS_functionalComponentArgsRest(__VLS_97));
-    const { default: __VLS_101 } = __VLS_99.slots;
+    }, ...__VLS_functionalComponentArgsRest(__VLS_111));
+    const { default: __VLS_115 } = __VLS_113.slots;
     (__VLS_ctx.current.status || '-');
     // @ts-ignore
     [statusTagType, current, current,];
-    var __VLS_99;
-    let __VLS_102;
+    var __VLS_113;
+    let __VLS_116;
     /** @ts-ignore @type {typeof __VLS_components.elTag | typeof __VLS_components.ElTag | typeof __VLS_components.elTag | typeof __VLS_components.ElTag} */
     elTag;
     // @ts-ignore
-    const __VLS_103 = __VLS_asFunctionalComponent1(__VLS_102, new __VLS_102({
+    const __VLS_117 = __VLS_asFunctionalComponent1(__VLS_116, new __VLS_116({
         type: (__VLS_ctx.websocketTagType),
     }));
-    const __VLS_104 = __VLS_103({
+    const __VLS_118 = __VLS_117({
         type: (__VLS_ctx.websocketTagType),
-    }, ...__VLS_functionalComponentArgsRest(__VLS_103));
-    const { default: __VLS_107 } = __VLS_105.slots;
+    }, ...__VLS_functionalComponentArgsRest(__VLS_117));
+    const { default: __VLS_121 } = __VLS_119.slots;
     (__VLS_ctx.websocketState);
     // @ts-ignore
     [websocketTagType, websocketState,];
-    var __VLS_105;
+    var __VLS_119;
     // @ts-ignore
     [];
 }
@@ -650,7 +808,7 @@ else {
 }
 // @ts-ignore
 [];
-var __VLS_92;
+var __VLS_106;
 // @ts-ignore
 [];
 const __VLS_export = (await import('vue')).defineComponent({});

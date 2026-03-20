@@ -12,6 +12,9 @@
         <el-menu-item index="/accounts">
           <span>账号管理</span>
         </el-menu-item>
+        <el-menu-item index="/online-accounts">
+          <span>线上账号管理</span>
+        </el-menu-item>
         <el-menu-item index="/settings">
           <span>设置页</span>
         </el-menu-item>
@@ -42,6 +45,10 @@ const route = useRoute()
 
 const heading = computed(() => {
   switch (route.name) {
+    case 'online-accounts':
+      return {
+        title: '线上账号管理',
+      }
     case 'accounts':
       return {
         title: '账号管理',

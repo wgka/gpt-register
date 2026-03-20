@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import AppShell from '@/layouts/AppShell.vue'
 import AccountsView from '@/views/AccountsView.vue'
 import DashboardView from '@/views/DashboardView.vue'
+import OnlineAccountsView from '@/views/OnlineAccountsView.vue'
 import SettingsView from '@/views/SettingsView.vue'
 
 const router = createRouter({
@@ -21,6 +22,11 @@ const router = createRouter({
           path: 'accounts',
           name: 'accounts',
           component: AccountsView,
+        },
+        {
+          path: 'online-accounts',
+          name: 'online-accounts',
+          component: OnlineAccountsView,
         },
         {
           path: 'settings',

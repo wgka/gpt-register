@@ -1,0 +1,86 @@
+fetch("https://api.stripe.com/v1/payment_methods", {
+  "headers": {
+    "accept": "application/json",
+    "accept-language": "zh-CN,zh;q=0.9",
+    "cache-control": "no-cache",
+    "content-type": "application/x-www-form-urlencoded",
+    "pragma": "no-cache",
+    "priority": "u=1, i",
+    "sec-ch-ua": "\"Chromium\";v=\"148\", \"Google Chrome\";v=\"148\", \"Not/A)Brand\";v=\"99\"",
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": "\"Windows\"",
+    "sec-fetch-dest": "empty",
+    "sec-fetch-mode": "cors",
+    "sec-fetch-site": "same-site",
+    "Referer": "https://checkout.stripe.com/"
+  },
+  "body": "type=card&card[number]=4462220004555824&card[cvc]=165&card[exp_month]=03&card[exp_year]=29&billing_details[name]=zhi+yang&billing_details[email]=nreed510%40gislinghamsilverband.com&billing_details[address][country]=GB&billing_details[address][line1]=961+Great+West+Road&billing_details[address][city]=Brentford&billing_details[address][postal_code]=TW8+9FX&guid=74f48061-0dc9-41dd-8cfa-66cacce34062014445&muid=9cc8d17e-b5e2-43d9-b2c8-27e1f7bf7c10d7355b&sid=a870304c-2a1b-47bb-a0dc-9dd367891c19f4e252&_stripe_version=2020-08-27%3Bcustom_checkout_beta%3Dv1%3B+checkout_server_update_beta%3Dv1%3B+checkout_manual_approval_preview%3Dv1&key=pk_live_51HOrSwC6h1nxGoI3lTAgRjYVrz4dU3fVOabyCcKR3pbEJguCVAlqCxdxCUvoRh1XWwRacViovU3kLKvpkjh7IqkW00iXQsjo3n&payment_user_agent=stripe.js%2F6f0a6c63d0%3B+stripe-js-v3%2F6f0a6c63d0%3B+checkout&client_attribution_metadata[client_session_id]=6dd40c4f-eaeb-4452-9f7e-f9b181c1ee30&client_attribution_metadata[checkout_session_id]=cs_live_a1vcKJOIyR6pWvJXkZWyYtPRqDkEwuKlrn0eDSfauHkBglvebcCKxhF7MJ&client_attribution_metadata[merchant_integration_source]=checkout&client_attribution_metadata[merchant_integration_version]=custom_checkout&client_attribution_metadata[payment_method_selection_flow]=automatic&client_attribution_metadata[checkout_config_id]=cdcb39fe-ed6a-4a50-a0f6-a95842c306ac",
+  "method": "POST"
+});
+
+拿到pm
+{
+  "id": "pm_1TCiEIC6h1nxGoI3oWo0XRcC",
+  "object": "payment_method",
+  "allow_redisplay": "unspecified",
+  "billing_details": {
+    "address": {
+      "city": "Brentford",
+      "country": "GB",
+      "line1": "961 Great West Road",
+      "line2": null,
+      "postal_code": "TW8 9FX",
+      "state": null
+
+
+
+
+      之后
+确认提交
+fetch("https://api.stripe.com/v1/payment_pages/cs_live_a1vcKJOIyR6pWvJXkZWyYtPRqDkEwuKlrn0eDSfauHkBglvebcCKxhF7MJ/confirm", {
+  "headers": {
+    "accept": "application/json",
+    "accept-language": "zh-CN,zh;q=0.9",
+    "cache-control": "no-cache",
+    "content-type": "application/x-www-form-urlencoded",
+    "pragma": "no-cache",
+    "priority": "u=1, i",
+    "sec-ch-ua": "\"Chromium\";v=\"148\", \"Google Chrome\";v=\"148\", \"Not/A)Brand\";v=\"99\"",
+    "sec-ch-ua-mobile": "?0",
+    "sec-ch-ua-platform": "\"Windows\"",
+    "sec-fetch-dest": "empty",
+    "sec-fetch-mode": "cors",
+    "sec-fetch-site": "same-site",
+    "Referer": "https://checkout.stripe.com/"
+  },
+  "body": "eid=NA&payment_method=pm_1TCiEIC6h1nxGoI3oWo0XRcC&expected_amount=0&tax_id_collection[purchasing_as_business]=false&expected_payment_method_type=card&_stripe_version=2020-08-27%3Bcustom_checkout_beta%3Dv1%3B+checkout_server_update_beta%3Dv1%3B+checkout_manual_approval_preview%3Dv1&guid=74f48061-0dc9-41dd-8cfa-66cacce34062014445&muid=9cc8d17e-b5e2-43d9-b2c8-27e1f7bf7c10d7355b&sid=a870304c-2a1b-47bb-a0dc-9dd367891c19f4e252&key=pk_live_51HOrSwC6h1nxGoI3lTAgRjYVrz4dU3fVOabyCcKR3pbEJguCVAlqCxdxCUvoRh1XWwRacViovU3kLKvpkjh7IqkW00iXQsjo3n&version=6f0a6c63d0&passive_captcha_ekey=&client_attribution_metadata[client_session_id]=6dd40c4f-eaeb-4452-9f7e-f9b181c1ee30&client_attribution_metadata[checkout_session_id]=cs_live_a1vcKJOIyR6pWvJXkZWyYtPRqDkEwuKlrn0eDSfauHkBglvebcCKxhF7MJ&client_attribution_metadata[merchant_integration_source]=checkout&client_attribution_metadata[merchant_integration_version]=custom_checkout&client_attribution_metadata[payment_method_selection_flow]=automatic&client_attribution_metadata[checkout_config_id]=cdcb39fe-ed6a-4a50-a0f6-a95842c306ac",
+  "method": "POST"
+});
+
+
+改这的pm
+payment_method=pm_1TCiEIC6h1nxGoI3oWo0XRcC
+
+
+之后完成
+  "setup_future_usage_for_payment_method_type": {},
+  "setup_intent": {
+    "id": "seti_1TCghiC6h1nxGoI3bjRXYyY4",
+    "object": "setup_intent",
+    "automatic_payment_methods": null,
+    "cancellation_reason": null,
+    "client_secret": "seti_1TCghiC6h1nxGoI3bjRXYyY4_secret_UB2nVhAsjnXErJimHFgBIjTd9vHcThA",
+    "created": 1773927218,
+    "description": null,
+    "excluded_payment_method_types": null,
+    "last_setup_error": null,
+    "livemode": true,
+    "next_action": null,
+    "payment_method": "pm_1TCiEIC6h1nxGoI3oWo0XRcC",
+    "payment_method_configuration_details": null,
+    "payment_method_types": [
+      "card"
+    ],
+    "status": "succeeded",
+    "usage": "off_session"
+  },

@@ -3,6 +3,10 @@ import { useRoute } from 'vue-router';
 const route = useRoute();
 const heading = computed(() => {
     switch (route.name) {
+        case 'online-accounts':
+            return {
+                title: '线上账号管理',
+            };
         case 'accounts':
             return {
                 title: '账号管理',
@@ -119,41 +123,56 @@ let __VLS_31;
 elMenuItem;
 // @ts-ignore
 const __VLS_32 = __VLS_asFunctionalComponent1(__VLS_31, new __VLS_31({
-    index: "/settings",
+    index: "/online-accounts",
 }));
 const __VLS_33 = __VLS_32({
-    index: "/settings",
+    index: "/online-accounts",
 }, ...__VLS_functionalComponentArgsRest(__VLS_32));
 const { default: __VLS_36 } = __VLS_34.slots;
 __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({});
 // @ts-ignore
 [];
 var __VLS_34;
+let __VLS_37;
+/** @ts-ignore @type {typeof __VLS_components.elMenuItem | typeof __VLS_components.ElMenuItem | typeof __VLS_components.elMenuItem | typeof __VLS_components.ElMenuItem} */
+elMenuItem;
+// @ts-ignore
+const __VLS_38 = __VLS_asFunctionalComponent1(__VLS_37, new __VLS_37({
+    index: "/settings",
+}));
+const __VLS_39 = __VLS_38({
+    index: "/settings",
+}, ...__VLS_functionalComponentArgsRest(__VLS_38));
+const { default: __VLS_42 } = __VLS_40.slots;
+__VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({});
+// @ts-ignore
+[];
+var __VLS_40;
 // @ts-ignore
 [];
 var __VLS_16;
 // @ts-ignore
 [];
 var __VLS_10;
-let __VLS_37;
+let __VLS_43;
 /** @ts-ignore @type {typeof __VLS_components.elContainer | typeof __VLS_components.ElContainer | typeof __VLS_components.elContainer | typeof __VLS_components.ElContainer} */
 elContainer;
 // @ts-ignore
-const __VLS_38 = __VLS_asFunctionalComponent1(__VLS_37, new __VLS_37({}));
-const __VLS_39 = __VLS_38({}, ...__VLS_functionalComponentArgsRest(__VLS_38));
-const { default: __VLS_42 } = __VLS_40.slots;
-let __VLS_43;
+const __VLS_44 = __VLS_asFunctionalComponent1(__VLS_43, new __VLS_43({}));
+const __VLS_45 = __VLS_44({}, ...__VLS_functionalComponentArgsRest(__VLS_44));
+const { default: __VLS_48 } = __VLS_46.slots;
+let __VLS_49;
 /** @ts-ignore @type {typeof __VLS_components.elHeader | typeof __VLS_components.ElHeader | typeof __VLS_components.elHeader | typeof __VLS_components.ElHeader} */
 elHeader;
 // @ts-ignore
-const __VLS_44 = __VLS_asFunctionalComponent1(__VLS_43, new __VLS_43({
+const __VLS_50 = __VLS_asFunctionalComponent1(__VLS_49, new __VLS_49({
     ...{ class: "shell__header" },
 }));
-const __VLS_45 = __VLS_44({
+const __VLS_51 = __VLS_50({
     ...{ class: "shell__header" },
-}, ...__VLS_functionalComponentArgsRest(__VLS_44));
+}, ...__VLS_functionalComponentArgsRest(__VLS_50));
 /** @type {__VLS_StyleScopedClasses['shell__header']} */ ;
-const { default: __VLS_48 } = __VLS_46.slots;
+const { default: __VLS_54 } = __VLS_52.slots;
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({});
 __VLS_asFunctionalElement1(__VLS_intrinsics.h2, __VLS_intrinsics.h2)({
     ...{ class: "shell__heading" },
@@ -162,35 +181,35 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.h2, __VLS_intrinsics.h2)({
 (__VLS_ctx.heading.title);
 // @ts-ignore
 [heading,];
-var __VLS_46;
-let __VLS_49;
+var __VLS_52;
+let __VLS_55;
 /** @ts-ignore @type {typeof __VLS_components.elMain | typeof __VLS_components.ElMain | typeof __VLS_components.elMain | typeof __VLS_components.ElMain} */
 elMain;
 // @ts-ignore
-const __VLS_50 = __VLS_asFunctionalComponent1(__VLS_49, new __VLS_49({
+const __VLS_56 = __VLS_asFunctionalComponent1(__VLS_55, new __VLS_55({
     ...{ class: "shell__main" },
 }));
-const __VLS_51 = __VLS_50({
+const __VLS_57 = __VLS_56({
     ...{ class: "shell__main" },
-}, ...__VLS_functionalComponentArgsRest(__VLS_50));
+}, ...__VLS_functionalComponentArgsRest(__VLS_56));
 /** @type {__VLS_StyleScopedClasses['shell__main']} */ ;
-const { default: __VLS_54 } = __VLS_52.slots;
+const { default: __VLS_60 } = __VLS_58.slots;
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
     ...{ class: "shell__content" },
 });
 /** @type {__VLS_StyleScopedClasses['shell__content']} */ ;
-let __VLS_55;
+let __VLS_61;
 /** @ts-ignore @type {typeof __VLS_components.RouterView} */
 RouterView;
 // @ts-ignore
-const __VLS_56 = __VLS_asFunctionalComponent1(__VLS_55, new __VLS_55({}));
-const __VLS_57 = __VLS_56({}, ...__VLS_functionalComponentArgsRest(__VLS_56));
+const __VLS_62 = __VLS_asFunctionalComponent1(__VLS_61, new __VLS_61({}));
+const __VLS_63 = __VLS_62({}, ...__VLS_functionalComponentArgsRest(__VLS_62));
 // @ts-ignore
 [];
-var __VLS_52;
+var __VLS_58;
 // @ts-ignore
 [];
-var __VLS_40;
+var __VLS_46;
 // @ts-ignore
 [];
 var __VLS_3;

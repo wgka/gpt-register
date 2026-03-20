@@ -25,6 +25,10 @@ token_*.json
 .env.local
 *.local
 
+# Bind card secrets
+bind_card/config.json
+bind_card/cards.txt
+
 # OS
 .DS_Store
 Thumbs.db
@@ -32,3 +36,4 @@ Thumbs.db
 # Project specific
 backups/
 /out/
+.cursor/

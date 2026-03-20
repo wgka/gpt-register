@@ -33,6 +33,12 @@ type dynamicProxyError struct {
 	Code    int    `json:"code"`
 }
 
+type proxyCandidate struct {
+	URL      string
+	Scheme   string
+	HostPort string
+}
+
 func ResolveProxy(value string) string {
 	if trimmed := strings.TrimSpace(value); trimmed != "" {
 		return trimmed
@@ -42,8 +48,8 @@ func ResolveProxy(value string) string {
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
 
-		if proxyURL, err := fetchDynamicProxy(ctx, apiURL); err == nil {
-			return proxyURL
+		if candidate, err := fetchDynamicProxy(ctx, apiURL); err == nil {
+			return candidate.URL
 		}
 	}
 
@@ -64,10 +70,14 @@ func ResolveRegistrationProxy(ctx context.Context, value string, settings engine
 	if attempts < 1 {
 		attempts = 1
 	}
+	preflightTimeoutSeconds := envInt("APP_PROXY_PREFLIGHT_TIMEOUT", 12)
+	if preflightTimeoutSeconds < 3 {
+		preflightTimeoutSeconds = 3
+	}
 
 	for attempt := 1; attempt <= attempts; attempt++ {
 		attemptCtx, cancel := context.WithTimeout(ctx, 45*time.Second)
-		proxyURL, err := fetchDynamicProxy(attemptCtx, apiURL)
+		candidate, err := fetchDynamicProxy(attemptCtx, apiURL)
 		cancel()
 		if err != nil {
 			if logf != nil {
@@ -75,19 +85,22 @@ func ResolveRegistrationProxy(ctx context.Context, value string, settings engine
 			}
 			continue
 		}
+		if logf != nil {
+			logf(fmt.Sprintf("动态代理候选 (%d/%d): %s %s", attempt, attempts, candidate.Scheme, candidate.HostPort))
+		}
 
-		checkCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-		err = validateRegistrationProxy(checkCtx, proxyURL, settings)
+		checkCtx, cancel := context.WithTimeout(ctx, time.Duration(preflightTimeoutSeconds)*time.Second)
+		err = validateRegistrationProxy(checkCtx, candidate.URL, settings)
 		cancel()
 		if err == nil {
 			if logf != nil && attempt > 1 {
 				logf(fmt.Sprintf("动态代理预检通过 (%d/%d)", attempt, attempts))
 			}
-			return proxyURL
+			return candidate.URL
 		}
 
 		if logf != nil {
-			logf(fmt.Sprintf("动态代理预检失败 (%d/%d): %v", attempt, attempts, err))
+			logf(fmt.Sprintf("动态代理预检失败 (%d/%d): %s %s -> %v", attempt, attempts, candidate.Scheme, candidate.HostPort, err))
 		}
 	}
 
@@ -98,15 +111,15 @@ func ResolveRegistrationProxy(ctx context.Context, value string, settings engine
 	return fallback
 }
 
-func fetchDynamicProxy(ctx context.Context, apiURL string) (string, error) {
+func fetchDynamicProxy(ctx context.Context, apiURL string) (proxyCandidate, error) {
 	client, err := newProxyAPIClient()
 	if err != nil {
-		return "", err
+		return proxyCandidate{}, err
 	}
 
 	req, err := httpf.NewRequestWithContext(ctx, http.MethodGet, strings.TrimSpace(apiURL), nil)
 	if err != nil {
-		return "", err
+		return proxyCandidate{}, err
 	}
 	req.Header = browserHeaders(httpf.Header{
 		"accept":             {"application/json, text/plain, */*"},
@@ -124,22 +137,22 @@ func fetchDynamicProxy(ctx context.Context, apiURL string) (string, error) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", err
+		return proxyCandidate{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("dynamic proxy api http %d", resp.StatusCode)
+		return proxyCandidate{}, fmt.Errorf("dynamic proxy api http %d", resp.StatusCode)
 	}
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
 	if err != nil {
-		return "", err
+		return proxyCandidate{}, err
 	}
 
 	var payload dynamicProxyResponse
 	if err := json.Unmarshal(body, &payload); err != nil {
-		return "", err
+		return proxyCandidate{}, err
 	}
 	if len(payload.Final) == 0 {
 		var details dynamicProxyError
@@ -147,25 +160,31 @@ func fetchDynamicProxy(ctx context.Context, apiURL string) (string, error) {
 			message := firstNonEmpty(details.Message, details.Msg, details.Error, details.Status)
 			if message != "" {
 				if details.Code != 0 {
-					return "", fmt.Errorf("dynamic proxy api returned empty result: code=%d msg=%s", details.Code, message)
+					return proxyCandidate{}, fmt.Errorf("dynamic proxy api returned empty result: code=%d msg=%s", details.Code, message)
 				}
-				return "", fmt.Errorf("dynamic proxy api returned empty result: %s", message)
+				return proxyCandidate{}, fmt.Errorf("dynamic proxy api returned empty result: %s", message)
 			}
 		}
-		return "", fmt.Errorf("dynamic proxy api returned empty result: %s", strings.TrimSpace(string(body)))
+		return proxyCandidate{}, fmt.Errorf("dynamic proxy api returned empty result: %s", strings.TrimSpace(string(body)))
 	}
 
 	item := payload.Final[0]
 	if strings.TrimSpace(item.IP) == "" || item.Port <= 0 {
-		return "", fmt.Errorf("dynamic proxy api returned invalid proxy")
+		return proxyCandidate{}, fmt.Errorf("dynamic proxy api returned invalid proxy")
 	}
 
+	scheme := detectProxyScheme(apiURL)
 	auth := ""
 	if strings.TrimSpace(item.Username) != "" || strings.TrimSpace(item.Password) != "" {
 		auth = item.Username + ":" + item.Password + "@"
 	}
 
-	return "socks5://" + auth + item.IP + ":" + strconv.Itoa(item.Port), nil
+	hostPort := item.IP + ":" + strconv.Itoa(item.Port)
+	return proxyCandidate{
+		URL:      scheme + "://" + auth + hostPort,
+		Scheme:   scheme,
+		HostPort: hostPort,
+	}, nil
 }
 
 func newProxyAPIClient() (tls_client.HttpClient, error) {
@@ -238,4 +257,21 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func detectProxyScheme(apiURL string) string {
+	parsedURL, err := url.Parse(strings.TrimSpace(apiURL))
+	if err != nil {
+		return "socks5"
+	}
+
+	proxyType := strings.ToLower(strings.TrimSpace(parsedURL.Query().Get("proxyType")))
+	switch proxyType {
+	case "http", "https":
+		return proxyType
+	case "socks5", "socks5h", "socks":
+		return "socks5"
+	default:
+		return "socks5"
+	}
 }

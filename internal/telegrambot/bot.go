@@ -122,7 +122,7 @@ func (s *Service) handleRegister(ctx context.Context, chatID int64, text string)
 		IntervalMin:      5,
 		IntervalMax:      15,
 		Proxy:            "",
-		EmailServiceType: "meteormail",
+		EmailServiceType: "tempmail",
 	}
 
 	msgID, err := s.send(chatID, fmt.Sprintf("已接收：数量=%d 并发=%d\n准备启动…", req.Count, req.Concurrency))

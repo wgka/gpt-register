@@ -17,8 +17,8 @@ func (a *apiServer) handleEmailServiceStats(w http.ResponseWriter, req *http.Req
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{
-		"meteormail_available": true,
-		"enabled_count":        1,
+		"tempmail_available": true,
+		"enabled_count":      1,
 	})
 }
 
@@ -31,9 +31,9 @@ func (a *apiServer) handleEmailServiceTypes(w http.ResponseWriter, req *http.Req
 	writeJSON(w, http.StatusOK, map[string]any{
 		"types": []map[string]any{
 			{
-				"value":       "meteormail",
-				"label":       "MeteorMail",
-				"description": "随机前缀拼接 @meteormail.me，直接轮询 meteormail 接口",
+				"value":       "tempmail",
+				"label":       "临时邮箱",
+				"description": "调用临时邮箱 API 自动生成邮箱并读取最新验证码",
 			},
 		},
 	})
@@ -45,11 +45,11 @@ func (a *apiServer) handleEmailServices(w http.ResponseWriter, req *http.Request
 		writeJSON(w, http.StatusOK, map[string]any{
 			"total": 1,
 			"services": []map[string]any{
-				virtualMeteorMailService(false),
+				virtualTempMailService(false),
 			},
 		})
 	case http.MethodPost:
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "meteormail does not require configuration"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "tempmail does not require configuration"})
 	default:
 		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 	}
@@ -58,56 +58,57 @@ func (a *apiServer) handleEmailServices(w http.ResponseWriter, req *http.Request
 func (a *apiServer) handleEmailServiceDetail(w http.ResponseWriter, req *http.Request) {
 	path := strings.Trim(strings.TrimPrefix(req.URL.Path, "/api/email-services/"), "/")
 	switch path {
-	case "1", "meteormail":
+	case "1", "tempmail", "temp-email", "meteormail":
 		switch req.Method {
 		case http.MethodGet:
-			writeJSON(w, http.StatusOK, virtualMeteorMailService(false))
+			writeJSON(w, http.StatusOK, virtualTempMailService(false))
 		case http.MethodPatch, http.MethodDelete:
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "meteormail does not require configuration"})
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "tempmail does not require configuration"})
 		default:
 			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 		}
-	case "1/full", "meteormail/full":
+	case "1/full", "tempmail/full", "temp-email/full", "meteormail/full":
 		if req.Method != http.MethodGet {
 			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 			return
 		}
-		writeJSON(w, http.StatusOK, virtualMeteorMailService(true))
-	case "1/test", "meteormail/test":
+		writeJSON(w, http.StatusOK, virtualTempMailService(true))
+	case "1/test", "tempmail/test", "temp-email/test", "meteormail/test":
 		if req.Method != http.MethodPost {
 			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 			return
 		}
-		if err := runtime.TestMeteormail(req.Context(), ""); err != nil {
+		if err := runtime.TestTempMail(req.Context(), ""); err != nil {
 			writeJSON(w, http.StatusOK, map[string]any{"success": false, "message": err.Error()})
 			return
 		}
-		writeJSON(w, http.StatusOK, map[string]any{"success": true, "message": "MeteorMail 接口可用"})
-	case "1/enable", "meteormail/enable", "1/disable", "meteormail/disable":
+		writeJSON(w, http.StatusOK, map[string]any{"success": true, "message": "临时邮箱接口可用"})
+	case "1/enable", "tempmail/enable", "temp-email/enable", "meteormail/enable", "1/disable", "tempmail/disable", "temp-email/disable", "meteormail/disable":
 		if req.Method != http.MethodPost {
 			writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
 			return
 		}
-		writeJSON(w, http.StatusOK, map[string]any{"success": true, "message": "meteormail is always enabled"})
+		writeJSON(w, http.StatusOK, map[string]any{"success": true, "message": "tempmail is always enabled"})
 	default:
 		http.NotFound(w, req)
 	}
 }
 
-func virtualMeteorMailService(includeConfig bool) map[string]any {
+func virtualTempMailService(includeConfig bool) map[string]any {
 	service := map[string]any{
 		"id":           1,
-		"service_type": "meteormail",
-		"name":         "MeteorMail",
+		"service_type": "tempmail",
+		"name":         "临时邮箱",
 		"enabled":      true,
 		"priority":     0,
-		"domain":       "meteormail.me",
+		"domain":       "动态域名",
 	}
 	if includeConfig {
 		service["config"] = map[string]any{
-			"api_url": "http://meteormail.me/api/mails/{email}",
-			"domain":  "meteormail.me",
-			"mode":    "random_prefix",
+			"api_base_url": runtime.DefaultTempMailAPIBaseURL,
+			"create_api":   "/temp-email/random",
+			"code_api":     "/mail/temp/{email}/code",
+			"mode":         "api_driven_temp_email",
 		}
 	}
 	return service
@@ -125,7 +126,7 @@ func (a *apiServer) handleRegistrationStart(w http.ResponseWriter, req *http.Req
 		return
 	}
 	if strings.TrimSpace(payload.EmailServiceType) == "" {
-		payload.EmailServiceType = "meteormail"
+		payload.EmailServiceType = "tempmail"
 	}
 
 	task, err := a.tasks.StartRegistration(req.Context(), payload)
@@ -148,7 +149,7 @@ func (a *apiServer) handleRegistrationBatch(w http.ResponseWriter, req *http.Req
 		return
 	}
 	if strings.TrimSpace(payload.EmailServiceType) == "" {
-		payload.EmailServiceType = "meteormail"
+		payload.EmailServiceType = "tempmail"
 	}
 
 	batchID, tasks, err := a.tasks.StartBatch(req.Context(), payload)
@@ -304,16 +305,16 @@ func (a *apiServer) handleRegistrationAvailableServices(w http.ResponseWriter, r
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{
-		"meteormail": map[string]any{
+		"tempmail": map[string]any{
 			"available": true,
 			"count":     1,
 			"services": []map[string]any{
 				{
 					"id":          1,
-					"name":        "MeteorMail",
-					"type":        "meteormail",
-					"domain":      "meteormail.me",
-					"description": "随机前缀邮箱，直接轮询 meteormail 接口",
+					"name":        "临时邮箱",
+					"type":        "tempmail",
+					"domain":      "动态域名",
+					"description": "调用临时邮箱 API 自动生成邮箱并读取最新验证码",
 				},
 			},
 		},

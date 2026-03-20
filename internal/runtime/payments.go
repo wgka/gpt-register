@@ -111,7 +111,7 @@ func requestBindCardCheckout(ctx context.Context, accessToken, proxyURL, uiMode 
 	_ = json.Unmarshal(respBody, &data)
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		return nil, fmt.Errorf("%s", resolveCheckoutError(data, resp.StatusCode))
+		return "", fmt.Errorf("%s", resolveCheckoutError(data, resp.StatusCode))
 	}
 	return data, nil
 }

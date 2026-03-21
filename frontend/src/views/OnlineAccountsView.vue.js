@@ -18,11 +18,12 @@ const deletingId = ref(null);
 const cleaningInvalid = ref(false);
 const searchText = ref('');
 const filterStatus = ref('');
+const tokenInvalidCodes = new Set(['token_invalidated', 'deactivated_workspace']);
 function isTokenInvalid(file) {
     const payload = parseStatusMessage(file);
     if (!payload)
         return false;
-    return payload.error?.code === 'token_invalidated';
+    return tokenInvalidCodes.has(payload.error?.code || payload.detail?.code || '');
 }
 function parseStatusMessage(file) {
     if (!file.status_message)

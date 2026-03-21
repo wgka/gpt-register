@@ -148,6 +148,9 @@ type StatusMessagePayload = {
     resets_at?: number | string
     resets_in_seconds?: number | string
   }
+  detail?: {
+    code?: string
+  }
 }
 
 type AuthFile = {
@@ -172,11 +175,12 @@ const deletingId = ref<string | null>(null)
 const cleaningInvalid = ref(false)
 const searchText = ref('')
 const filterStatus = ref('')
+const tokenInvalidCodes = new Set(['token_invalidated', 'deactivated_workspace'])
 
 function isTokenInvalid(file: AuthFile): boolean {
   const payload = parseStatusMessage(file)
   if (!payload) return false
-  return payload.error?.code === 'token_invalidated'
+  return tokenInvalidCodes.has(payload.error?.code || payload.detail?.code || '')
 }
 
 function parseStatusMessage(file: AuthFile): StatusMessagePayload | null {

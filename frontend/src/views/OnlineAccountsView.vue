@@ -178,18 +178,36 @@ const filterStatus = ref('')
 const tokenInvalidCodes = new Set(['token_invalidated', 'deactivated_workspace'])
 
 function isTokenInvalid(file: AuthFile): boolean {
+  if (containsTokenInvalidCode(file.status_message)) {
+    return true
+  }
   const payload = parseStatusMessage(file)
   if (!payload) return false
   return tokenInvalidCodes.has(payload.error?.code || payload.detail?.code || '')
 }
 
+function containsTokenInvalidCode(raw: string | undefined): boolean {
+  if (!raw) return false
+  return Array.from(tokenInvalidCodes).some((code) => raw.includes(code))
+}
+
 function parseStatusMessage(file: AuthFile): StatusMessagePayload | null {
   if (!file.status_message) return null
-  try {
-    return JSON.parse(file.status_message) as StatusMessagePayload
-  } catch {
-    return null
+  let payload: unknown = file.status_message
+  for (let i = 0; i < 2; i++) {
+    if (payload && typeof payload === 'object') {
+      return payload as StatusMessagePayload
+    }
+    if (typeof payload !== 'string') {
+      return null
+    }
+    try {
+      payload = JSON.parse(payload)
+    } catch {
+      return null
+    }
   }
+  return payload && typeof payload === 'object' ? (payload as StatusMessagePayload) : null
 }
 
 const invalidFiles = computed(() => files.value.filter(isTokenInvalid))

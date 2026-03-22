@@ -1,17 +1,23 @@
 import { computed, onMounted, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-const MANAGEMENT_BASE = (() => {
-    const url = import.meta.env.VITE_CPA_API_URL;
-    if (!url)
+function normalizeManagementEndpoint(url) {
+    const raw = (url || '').trim();
+    if (!raw)
         return '';
     try {
-        return new URL(url).origin;
+        const parsed = new URL(raw);
+        const pathname = parsed.pathname.replace(/\/+$/, '');
+        if (!pathname) {
+            return `${parsed.origin}/v0/management/auth-files`;
+        }
+        return `${parsed.origin}${pathname}`;
     }
     catch {
         return '';
     }
-})();
-const MANAGEMENT_TOKEN = import.meta.env.VITE_CPA_API_TOKEN;
+}
+const managementEndpoint = ref(normalizeManagementEndpoint(import.meta.env.VITE_CPA_API_URL));
+const managementToken = ref((import.meta.env.VITE_CPA_API_TOKEN || '').trim());
 const files = ref([]);
 const loading = ref(false);
 const deletingId = ref(null);
@@ -92,6 +98,40 @@ function countByStatus(status) {
 }
 const invalidTokenCount = computed(() => invalidFiles.value.length);
 const usageLimitedCount = computed(() => files.value.filter((f) => usageLimitState(f) === 'limited').length);
+async function readJSONResponse(response) {
+    const raw = await response.text();
+    try {
+        return JSON.parse(raw);
+    }
+    catch {
+        const contentType = response.headers.get('content-type') || 'unknown';
+        const snippet = raw.replace(/\s+/g, ' ').trim().slice(0, 120);
+        throw new Error(`期望 JSON，实际返回 ${contentType}${snippet ? `: ${snippet}` : ''}`);
+    }
+}
+async function refreshManagementConfig() {
+    const response = await fetch('/api/settings');
+    if (!response.ok) {
+        throw new Error(`加载配置失败: HTTP ${response.status}`);
+    }
+    const data = await readJSONResponse(response);
+    managementEndpoint.value = normalizeManagementEndpoint(data.editable?.cpa?.api_url);
+    managementToken.value = (data.editable?.cpa?.api_token || '').trim();
+}
+async function ensureManagementConfig() {
+    try {
+        await refreshManagementConfig();
+    }
+    catch (e) {
+        console.warn('load management config failed', e);
+    }
+    if (!managementEndpoint.value) {
+        throw new Error('CPA API URL 未配置');
+    }
+    if (!managementToken.value) {
+        throw new Error('CPA API Token 未配置');
+    }
+}
 function numberFromUnknown(value) {
     if (typeof value === 'number') {
         return Number.isFinite(value) ? value : null;
@@ -135,10 +175,10 @@ function shouldAutoEnableAfterLimit(file) {
     return resetAt !== null && resetAt <= Date.now();
 }
 async function updateFileDisabledStatus(file, disabled) {
-    const response = await fetch(`${MANAGEMENT_BASE}/v0/management/auth-files/status`, {
+    const response = await fetch(`${managementEndpoint.value}/status`, {
         method: 'PATCH',
         headers: {
-            Authorization: `Bearer ${MANAGEMENT_TOKEN}`,
+            Authorization: `Bearer ${managementToken.value}`,
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -176,13 +216,14 @@ async function syncUsageLimitAccountStates(nextFiles) {
 async function loadFiles(syncUsageLimit = true) {
     loading.value = true;
     try {
-        const response = await fetch(`${MANAGEMENT_BASE}/v0/management/auth-files`, {
-            headers: { Authorization: `Bearer ${MANAGEMENT_TOKEN}` },
+        await ensureManagementConfig();
+        const response = await fetch(managementEndpoint.value, {
+            headers: { Authorization: `Bearer ${managementToken.value}` },
         });
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
-        const data = (await response.json());
+        const data = await readJSONResponse(response);
         const nextFiles = data.files ?? [];
         if (syncUsageLimit) {
             const changed = await syncUsageLimitAccountStates(nextFiles);
@@ -209,7 +250,8 @@ async function deleteFile(file) {
     }
     deletingId.value = file.id;
     try {
-        const response = await fetch(`${MANAGEMENT_BASE}/v0/management/auth-files?name=${encodeURIComponent(file.name)}`, { method: 'DELETE', headers: { Authorization: `Bearer ${MANAGEMENT_TOKEN}` } });
+        await ensureManagementConfig();
+        const response = await fetch(`${managementEndpoint.value}?name=${encodeURIComponent(file.name)}`, { method: 'DELETE', headers: { Authorization: `Bearer ${managementToken.value}` } });
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
@@ -237,9 +279,10 @@ async function cleanAllInvalid() {
     let successCount = 0;
     let failCount = 0;
     try {
+        await ensureManagementConfig();
         for (const file of targets) {
             try {
-                const response = await fetch(`${MANAGEMENT_BASE}/v0/management/auth-files?name=${encodeURIComponent(file.name)}`, { method: 'DELETE', headers: { Authorization: `Bearer ${MANAGEMENT_TOKEN}` } });
+                const response = await fetch(`${managementEndpoint.value}?name=${encodeURIComponent(file.name)}`, { method: 'DELETE', headers: { Authorization: `Bearer ${managementToken.value}` } });
                 if (response.ok) {
                     successCount++;
                 }

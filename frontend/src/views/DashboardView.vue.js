@@ -415,13 +415,11 @@ elInputNumber;
 const __VLS_36 = __VLS_asFunctionalComponent1(__VLS_35, new __VLS_35({
     modelValue: (__VLS_ctx.form.count),
     min: (1),
-    max: (100),
     controlsPosition: "right",
 }));
 const __VLS_37 = __VLS_36({
     modelValue: (__VLS_ctx.form.count),
     min: (1),
-    max: (100),
     controlsPosition: "right",
 }, ...__VLS_functionalComponentArgsRest(__VLS_36));
 // @ts-ignore

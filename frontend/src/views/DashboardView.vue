@@ -20,7 +20,7 @@
         <el-form class="launch-form" label-position="top" @submit.prevent>
           <div class="launch-fields">
             <el-form-item label="数量">
-              <el-input-number v-model="form.count" :min="1" :max="100" controls-position="right" />
+              <el-input-number v-model="form.count" :min="1" controls-position="right" />
             </el-form-item>
             <el-form-item label="并发数">
               <el-input-number

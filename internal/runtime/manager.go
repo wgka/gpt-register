@@ -69,6 +69,8 @@ type TaskManager struct {
 	batches          map[string]*BatchStatus
 }
 
+const batchPhoneVerificationRetryLimit = 4
+
 func NewTaskManager(db *store.SQLiteStore) *TaskManager {
 	return &TaskManager{
 		db:               db,
@@ -287,8 +289,13 @@ func (m *TaskManager) runTask(ctx context.Context, batchID, taskUUID string, req
 		m.mu.Unlock()
 	}()
 
+	shortID := taskUUID
+	if len(shortID) > 8 {
+		shortID = shortID[:8]
+	}
+
 	logf := func(message string) {
-		timestamped := "[" + time.Now().Format("15:04:05") + "] " + message
+		timestamped := "[" + time.Now().Format("15:04:05") + "] [" + shortID + "] " + message
 		_ = m.db.AppendRegistrationTaskLog(context.Background(), taskUUID, timestamped)
 		m.publishTaskEvent(taskUUID, TaskEvent{
 			Type:      "log",
@@ -359,8 +366,34 @@ func (m *TaskManager) runTask(ctx context.Context, batchID, taskUUID string, req
 		})
 	}
 
-	engine := newRegistrationEngine(settings, service, resolvedProxy, logf)
-	result := engine.run(ctx)
+	maxPhoneRetries := 0
+	if strings.TrimSpace(batchID) != "" {
+		maxPhoneRetries = batchPhoneVerificationRetryLimit
+	}
+
+	var result RegistrationResult
+	for attempt := 1; attempt <= maxPhoneRetries+1; attempt++ {
+		if attempt > 1 {
+			logf(fmt.Sprintf("检测到 add-phone，自动更换邮箱重试 (%d/%d)", attempt-1, maxPhoneRetries))
+		}
+
+		engine := newRegistrationEngine(settings, service, resolvedProxy, logf)
+		result = engine.run(ctx)
+		if result.Success {
+			if attempt > 1 {
+				if result.Metadata == nil {
+					result.Metadata = map[string]any{}
+				}
+				result.Metadata["phone_retry_count"] = attempt - 1
+			}
+			break
+		}
+		if !shouldRetryPhoneVerification(result, attempt, maxPhoneRetries) {
+			break
+		}
+		logf(fmt.Sprintf("当前邮箱触发 add-phone：%s，准备丢弃并换号", result.Email))
+	}
+
 	if !result.Success {
 		_, _ = m.db.UpdateRegistrationTask(context.Background(), taskUUID, map[string]any{
 			"status":        "failed",
@@ -443,6 +476,17 @@ func (m *TaskManager) runTask(ctx context.Context, batchID, taskUUID string, req
 	})
 }
 
+func shouldRetryPhoneVerification(result RegistrationResult, attempt, maxRetries int) bool {
+	if attempt > maxRetries || maxRetries <= 0 {
+		return false
+	}
+	message := strings.ToLower(strings.TrimSpace(result.ErrorMessage))
+	if message == "" {
+		return false
+	}
+	return strings.Contains(message, "phone verification required") || strings.Contains(message, "/add-phone")
+}
+
 func (m *TaskManager) selectEmailService(ctx context.Context, request StartRequest) (EmailService, *int, error) {
 	_ = ctx
 
@@ -517,7 +561,7 @@ func sha256Base64URL(value string) string {
 }
 
 func userAgent() string {
-	return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+	return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 }
 
 func nullableTrimmed(value string) *string {

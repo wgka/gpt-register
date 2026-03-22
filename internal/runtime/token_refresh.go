@@ -2,7 +2,6 @@ package runtime
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -126,7 +125,7 @@ func (m tokenRefreshManager) refreshBySessionToken(ctx context.Context, sessionT
 		AccessToken string `json:"accessToken"`
 		Expires     string `json:"expires"`
 	}
-	if err := json.Unmarshal(body, &payload); err != nil {
+	if err := jsonUnmarshalResponse(body, &payload); err != nil {
 		return TokenRefreshResult{ErrorMessage: "Session token 刷新异常: " + err.Error()}
 	}
 	if strings.TrimSpace(payload.AccessToken) == "" {
@@ -177,7 +176,7 @@ func (m tokenRefreshManager) refreshByOAuthToken(ctx context.Context, refreshTok
 		RefreshToken string `json:"refresh_token"`
 		ExpiresIn    int    `json:"expires_in"`
 	}
-	if err := json.Unmarshal(body, &payload); err != nil {
+	if err := jsonUnmarshalResponse(body, &payload); err != nil {
 		return TokenRefreshResult{ErrorMessage: "OAuth token 刷新异常: " + err.Error()}
 	}
 	if strings.TrimSpace(payload.AccessToken) == "" {

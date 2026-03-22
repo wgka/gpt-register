@@ -45,6 +45,10 @@ func ResolveProxy(value string) string {
 	}
 
 	if apiURL := firstEnvValue("APP_PROXY_API_URL", "PROXY_API_URL"); apiURL != "" {
+		if directProxy := directProxyURL(apiURL); directProxy != "" {
+			return directProxy
+		}
+
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
 
@@ -62,6 +66,9 @@ func ResolveRegistrationProxy(ctx context.Context, value string, settings engine
 	}
 
 	apiURL := firstEnvValue("APP_PROXY_API_URL", "PROXY_API_URL")
+	if directProxy := directProxyURL(apiURL); directProxy != "" {
+		return directProxy
+	}
 	if apiURL == "" {
 		return firstEnvValue("APP_PROXY_URL", "PROXY_URL")
 	}
@@ -151,7 +158,7 @@ func fetchDynamicProxy(ctx context.Context, apiURL string) (proxyCandidate, erro
 	}
 
 	var payload dynamicProxyResponse
-	if err := json.Unmarshal(body, &payload); err != nil {
+	if err := jsonUnmarshalResponse(body, &payload); err != nil {
 		return proxyCandidate{}, err
 	}
 	if len(payload.Final) == 0 {
@@ -188,11 +195,11 @@ func fetchDynamicProxy(ctx context.Context, apiURL string) (proxyCandidate, erro
 }
 
 func newProxyAPIClient() (tls_client.HttpClient, error) {
-	return newTLSClient("", false)
+	return newTLSClient("", false, nil)
 }
 
 func validateRegistrationProxy(ctx context.Context, proxyURL string, settings engineSettings) error {
-	client, err := newBrowserClient(proxyURL)
+	client, err := newBrowserClient(proxyURL, nil)
 	if err != nil {
 		return err
 	}
@@ -274,4 +281,36 @@ func detectProxyScheme(apiURL string) string {
 	default:
 		return "socks5"
 	}
+}
+
+func directProxyURL(raw string) string {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return ""
+	}
+
+	parsedURL, err := url.Parse(trimmed)
+	if err != nil || strings.TrimSpace(parsedURL.Host) == "" {
+		return ""
+	}
+
+	switch strings.ToLower(strings.TrimSpace(parsedURL.Scheme)) {
+	case "http", "https", "socks5", "socks5h", "socks":
+	default:
+		return ""
+	}
+
+	if parsedURL.RawQuery != "" || parsedURL.Fragment != "" {
+		return ""
+	}
+	if parsedURL.Path != "" && parsedURL.Path != "/" {
+		return ""
+	}
+
+	if parsedURL.Scheme == "socks" {
+		parsedURL.Scheme = "socks5"
+	}
+	parsedURL.Path = ""
+
+	return parsedURL.String()
 }

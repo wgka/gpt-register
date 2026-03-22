@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math/rand/v2"
 	"net/http"
 	"net/url"
@@ -161,23 +162,25 @@ func (s *tempMailService) doJSON(req *http.Request, out any) error {
 	}
 	defer resp.Body.Close()
 
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
 	if resp.StatusCode >= 400 {
-		var body map[string]any
-		if json.NewDecoder(resp.Body).Decode(&body) == nil {
-			if detail := strings.TrimSpace(asString(body["detail"])); detail != "" {
+		var errBody map[string]any
+		if json.Unmarshal(body, &errBody) == nil {
+			if detail := strings.TrimSpace(asString(errBody["detail"])); detail != "" {
 				return fmt.Errorf("%s", detail)
 			}
-			if message := strings.TrimSpace(asString(body["message"])); message != "" {
+			if message := strings.TrimSpace(asString(errBody["message"])); message != "" {
 				return fmt.Errorf("%s", message)
 			}
 		}
 		return fmt.Errorf("temp mail api request failed: %d", resp.StatusCode)
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
-		return err
-	}
-	return nil
+	return jsonUnmarshalResponse(body, out)
 }
 
 func randomMailboxPrefix(length int) string {

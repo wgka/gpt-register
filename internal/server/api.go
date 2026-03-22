@@ -31,6 +31,7 @@ type settingsResponse struct {
 	App      settingsAppInfo        `json:"app"`
 	Runtime  settingsRuntimeInfo    `json:"runtime"`
 	Sections []config.PublicSection `json:"sections"`
+	Editable settingsEditableInfo   `json:"editable"`
 }
 
 type settingsAppInfo struct {
@@ -122,24 +123,7 @@ func apiRoutes(cfg config.Settings, api *apiServer) http.Handler {
 		writeJSON(w, http.StatusOK, resp)
 	})
 
-	mux.HandleFunc("/api/settings", func(w http.ResponseWriter, req *http.Request) {
-		resp := settingsResponse{
-			App: settingsAppInfo{
-				Name:    cfg.AppName,
-				Version: cfg.AppVersion,
-				Debug:   cfg.Debug,
-			},
-			Runtime: settingsRuntimeInfo{
-				Addr:           cfg.Addr(),
-				DatabaseURL:    cfg.NormalizedDatabaseURL(),
-				DatabaseDriver: cfg.DatabaseDriver(),
-				LogFile:        cfg.LogFile,
-			},
-			Sections: cfg.PublicSections(),
-		}
-
-		writeJSON(w, http.StatusOK, resp)
-	})
+	mux.HandleFunc("/api/settings", api.handleSettings)
 
 	mux.HandleFunc("/api/accounts/stats/summary", api.handleAccountStats)
 	mux.HandleFunc("/api/accounts/batch-refresh", api.handleBatchRefresh)

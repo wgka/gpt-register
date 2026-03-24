@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -48,15 +49,17 @@ type settingsRuntimeInfo struct {
 }
 
 type apiServer struct {
-	cfg   config.Settings
-	store *store.SQLiteStore
-	tasks *runtime.TaskManager
+	cfg       config.Settings
+	store     *store.SQLiteStore
+	tasks     *runtime.TaskManager
+	scheduler *runtime.OnlineAccountsScheduler
 }
 
 type App struct {
-	Handler http.Handler
-	Store   *store.SQLiteStore
-	Tasks   *runtime.TaskManager
+	Handler   http.Handler
+	Store     *store.SQLiteStore
+	Tasks     *runtime.TaskManager
+	Scheduler *runtime.OnlineAccountsScheduler
 }
 
 func NewApp(cfg config.Settings) *App {
@@ -67,17 +70,26 @@ func NewApp(cfg config.Settings) *App {
 	}
 
 	api := &apiServer{
-		cfg:   cfg,
-		store: dbStore,
-		tasks: runtime.NewTaskManager(dbStore),
+		cfg:       cfg,
+		store:     dbStore,
+		tasks:     runtime.NewTaskManager(dbStore),
+		scheduler: runtime.NewOnlineAccountsScheduler(dbStore),
 	}
 
 	mux := apiRoutes(cfg, api)
 	return &App{
-		Handler: mux,
-		Store:   dbStore,
-		Tasks:   api.tasks,
+		Handler:   mux,
+		Store:     dbStore,
+		Tasks:     api.tasks,
+		Scheduler: api.scheduler,
 	}
+}
+
+func (a *App) StartBackground(ctx context.Context) {
+	if a == nil || a.Scheduler == nil {
+		return
+	}
+	a.Scheduler.Start(ctx)
 }
 
 func apiMux(cfg config.Settings) http.Handler {
@@ -124,6 +136,9 @@ func apiRoutes(cfg config.Settings, api *apiServer) http.Handler {
 	})
 
 	mux.HandleFunc("/api/settings", api.handleSettings)
+	mux.HandleFunc("/api/online-accounts/scheduler/run", api.handleOnlineAccountsSchedulerRun)
+	mux.HandleFunc("/api/online-accounts/scheduler/logs", api.handleOnlineAccountsSchedulerLogs)
+	mux.HandleFunc("/api/online-accounts/scheduler", api.handleOnlineAccountsScheduler)
 
 	mux.HandleFunc("/api/accounts/stats/summary", api.handleAccountStats)
 	mux.HandleFunc("/api/accounts/batch-refresh", api.handleBatchRefresh)

@@ -26,6 +26,8 @@ func main() {
 	rootCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
+	app.StartBackground(rootCtx)
+
 	go func() {
 		if err := telegrambot.Start(rootCtx, app.Tasks); err != nil && err != context.Canceled {
 			log.Printf("telegram-bot: %v", err)

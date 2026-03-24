@@ -84,6 +84,25 @@ func (s *SQLiteStore) initSchema(ctx context.Context) error {
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
+		`CREATE TABLE IF NOT EXISTS online_account_scheduler_logs (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			trigger_type TEXT NOT NULL,
+			status TEXT NOT NULL,
+			attempt INTEGER DEFAULT 1,
+			max_attempts INTEGER DEFAULT 1,
+			schedule_mode TEXT,
+			actions TEXT,
+			invalid_found INTEGER DEFAULT 0,
+			disabled_count INTEGER DEFAULT 0,
+			deleted_count INTEGER DEFAULT 0,
+			failed_count INTEGER DEFAULT 0,
+			error_message TEXT,
+			messages TEXT,
+			started_at DATETIME,
+			finished_at DATETIME,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_online_account_scheduler_logs_created_at ON online_account_scheduler_logs(created_at DESC, id DESC)`,
 	}
 
 	for _, statement := range statements {

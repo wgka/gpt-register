@@ -1535,20 +1535,20 @@ if (__VLS_ctx.selectedAccount) {
         ...{ 'onClick': {} },
         link: true,
         type: "primary",
-        disabled: (!__VLS_ctx.selectedTokens.bind_card_url),
+        disabled: (!__VLS_ctx.selectedTokens.session_token),
     }));
     const __VLS_296 = __VLS_295({
         ...{ 'onClick': {} },
         link: true,
         type: "primary",
-        disabled: (!__VLS_ctx.selectedTokens.bind_card_url),
+        disabled: (!__VLS_ctx.selectedTokens.session_token),
     }, ...__VLS_functionalComponentArgsRest(__VLS_295));
     let __VLS_299;
     const __VLS_300 = ({ click: {} },
         { onClick: (...[$event]) => {
                 if (!(__VLS_ctx.selectedAccount))
                     return;
-                __VLS_ctx.copyValue(__VLS_ctx.selectedTokens.bind_card_url, '绑卡短链');
+                __VLS_ctx.copyValue(__VLS_ctx.selectedTokens.session_token, 'Session Token');
                 // @ts-ignore
                 [selectedTokens, selectedTokens, selectedTokens, copyValue,];
             } });
@@ -1558,7 +1558,7 @@ if (__VLS_ctx.selectedAccount) {
     var __VLS_297;
     var __VLS_298;
     __VLS_asFunctionalElement1(__VLS_intrinsics.code, __VLS_intrinsics.code)({});
-    (__VLS_ctx.selectedTokens.bind_card_url_summary || '-');
+    (__VLS_ctx.selectedTokens.session_token_summary || '-');
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
         ...{ class: "token-card" },
     });
@@ -1579,20 +1579,20 @@ if (__VLS_ctx.selectedAccount) {
         ...{ 'onClick': {} },
         link: true,
         type: "primary",
-        disabled: (!__VLS_ctx.selectedTokens.bind_card_long_url),
+        disabled: (!__VLS_ctx.selectedTokens.bind_card_url),
     }));
     const __VLS_304 = __VLS_303({
         ...{ 'onClick': {} },
         link: true,
         type: "primary",
-        disabled: (!__VLS_ctx.selectedTokens.bind_card_long_url),
+        disabled: (!__VLS_ctx.selectedTokens.bind_card_url),
     }, ...__VLS_functionalComponentArgsRest(__VLS_303));
     let __VLS_307;
     const __VLS_308 = ({ click: {} },
         { onClick: (...[$event]) => {
                 if (!(__VLS_ctx.selectedAccount))
                     return;
-                __VLS_ctx.copyValue(__VLS_ctx.selectedTokens.bind_card_long_url, '绑卡长链');
+                __VLS_ctx.copyValue(__VLS_ctx.selectedTokens.bind_card_url, '绑卡短链');
                 // @ts-ignore
                 [selectedTokens, selectedTokens, selectedTokens, copyValue,];
             } });
@@ -1601,6 +1601,50 @@ if (__VLS_ctx.selectedAccount) {
     [];
     var __VLS_305;
     var __VLS_306;
+    __VLS_asFunctionalElement1(__VLS_intrinsics.code, __VLS_intrinsics.code)({});
+    (__VLS_ctx.selectedTokens.bind_card_url_summary || '-');
+    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+        ...{ class: "token-card" },
+    });
+    /** @type {__VLS_StyleScopedClasses['token-card']} */ ;
+    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+        ...{ class: "token-card__header" },
+    });
+    /** @type {__VLS_StyleScopedClasses['token-card__header']} */ ;
+    __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
+        ...{ class: "detail-item__label" },
+    });
+    /** @type {__VLS_StyleScopedClasses['detail-item__label']} */ ;
+    let __VLS_310;
+    /** @ts-ignore @type {typeof __VLS_components.elButton | typeof __VLS_components.ElButton | typeof __VLS_components.elButton | typeof __VLS_components.ElButton} */
+    elButton;
+    // @ts-ignore
+    const __VLS_311 = __VLS_asFunctionalComponent1(__VLS_310, new __VLS_310({
+        ...{ 'onClick': {} },
+        link: true,
+        type: "primary",
+        disabled: (!__VLS_ctx.selectedTokens.bind_card_long_url),
+    }));
+    const __VLS_312 = __VLS_311({
+        ...{ 'onClick': {} },
+        link: true,
+        type: "primary",
+        disabled: (!__VLS_ctx.selectedTokens.bind_card_long_url),
+    }, ...__VLS_functionalComponentArgsRest(__VLS_311));
+    let __VLS_315;
+    const __VLS_316 = ({ click: {} },
+        { onClick: (...[$event]) => {
+                if (!(__VLS_ctx.selectedAccount))
+                    return;
+                __VLS_ctx.copyValue(__VLS_ctx.selectedTokens.bind_card_long_url, '绑卡长链');
+                // @ts-ignore
+                [selectedTokens, selectedTokens, selectedTokens, copyValue,];
+            } });
+    const { default: __VLS_317 } = __VLS_313.slots;
+    // @ts-ignore
+    [];
+    var __VLS_313;
+    var __VLS_314;
     __VLS_asFunctionalElement1(__VLS_intrinsics.code, __VLS_intrinsics.code)({});
     (__VLS_ctx.selectedTokens.bind_card_long_url_summary || '-');
 }

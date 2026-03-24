@@ -325,6 +325,8 @@ func writeAccountTokensResponse(w http.ResponseWriter, account *store.AccountTok
 		"refresh_token_summary":      truncateValue(pointerValue(account.RefreshToken), 50),
 		"id_token":                   pointerValue(account.IDToken),
 		"id_token_summary":           truncateValue(pointerValue(account.IDToken), 50),
+		"session_token":              pointerValue(account.SessionToken),
+		"session_token_summary":      truncateValue(pointerValue(account.SessionToken), 50),
 		"bind_card_url":              bindCardURL,
 		"bind_card_url_summary":      truncateValue(bindCardURL, 72),
 		"bind_card_long_url":         bindCardLongURL,

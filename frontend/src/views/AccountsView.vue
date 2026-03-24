@@ -307,6 +307,20 @@
             </div>
             <div class="token-card">
               <div class="token-card__header">
+                <span class="detail-item__label">Session Token</span>
+                <el-button
+                  link
+                  type="primary"
+                  :disabled="!selectedTokens.session_token"
+                  @click="copyValue(selectedTokens.session_token, 'Session Token')"
+                >
+                  复制
+                </el-button>
+              </div>
+              <code>{{ selectedTokens.session_token_summary || '-' }}</code>
+            </div>
+            <div class="token-card">
+              <div class="token-card__header">
                 <span class="detail-item__label">绑卡短链</span>
                 <el-button
                   link
@@ -376,6 +390,8 @@ type AccountTokens = {
   refresh_token_summary?: string | null
   id_token?: string | null
   id_token_summary?: string | null
+  session_token?: string | null
+  session_token_summary?: string | null
   bind_card_url?: string | null
   bind_card_url_summary?: string | null
   bind_card_long_url?: string | null

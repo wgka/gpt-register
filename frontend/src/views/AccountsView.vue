@@ -556,11 +556,14 @@ async function runRowAction(account: Account, action: BatchAction, reloadDetail 
       valid?: boolean
       message?: string
       error?: string
+      deleted?: boolean
     }
 
     if (action === 'validate') {
       if (payload.valid) {
         ElMessage.success(`账号 ${account.email} Token 有效`)
+      } else if (payload.deleted) {
+        ElMessage.warning(payload.error || `账号 ${account.email} Token 无效，已删除`)
       } else {
         ElMessage.warning(payload.error || `账号 ${account.email} Token 无效`)
       }
@@ -572,6 +575,12 @@ async function runRowAction(account: Account, action: BatchAction, reloadDetail 
 
     await refreshAll()
     if (reloadDetail && selectedAccount.value?.id === account.id) {
+      if (action === 'validate' && payload.deleted) {
+        detailVisible.value = false
+        selectedAccount.value = null
+        selectedTokens.value = {}
+        return
+      }
       await openDetail(account.id)
     }
   } catch {
@@ -747,7 +756,7 @@ function buildBatchMessage(action: BatchAction, payload: Record<string, unknown>
     return `刷新完成，成功 ${Number(payload.success_count ?? 0)}，失败 ${Number(payload.failed_count ?? 0)}`
   }
   if (action === 'validate') {
-    return `校验完成，有效 ${Number(payload.valid_count ?? 0)}，无效 ${Number(payload.invalid_count ?? 0)}`
+    return `校验完成，有效 ${Number(payload.valid_count ?? 0)}，无效 ${Number(payload.invalid_count ?? 0)}，已删除 ${Number(payload.deleted_count ?? 0)}`
   }
   return `上传完成，成功 ${Number(payload.success_count ?? 0)}，失败 ${Number(payload.failed_count ?? 0)}，跳过 ${Number(payload.skipped_count ?? 0)}`
 }

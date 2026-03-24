@@ -403,6 +403,35 @@ func (s *SQLiteStore) CreateAccount(ctx context.Context, account AccountCreate) 
 	return int(insertID), nil
 }
 
+func (s *SQLiteStore) DeleteAccount(ctx context.Context, accountID int) error {
+	if !s.Available() {
+		return errors.New("database unavailable")
+	}
+
+	exists, err := s.tableExists(ctx, "accounts")
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return errors.New("accounts table missing")
+	}
+
+	result, err := s.db.ExecContext(ctx, `DELETE FROM accounts WHERE id = ?`, accountID)
+	if err != nil {
+		return fmt.Errorf("delete account: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("read deleted account rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}
+
 func (s *SQLiteStore) UpdateAccount(ctx context.Context, accountID int, updates map[string]any) error {
 	if !s.Available() {
 		return errors.New("database unavailable")

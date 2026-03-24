@@ -191,11 +191,12 @@ func (a *apiServer) handleAccountValidate(w http.ResponseWriter, req *http.Reque
 		_ = json.NewDecoder(req.Body).Decode(&payload)
 	}
 
-	valid, errText := runtime.ValidateAccountToken(req.Context(), a.store, accountID, runtime.ResolveProxy(payload.Proxy))
+	result := a.validateAndDeleteInvalidAccount(req.Context(), accountID, runtime.ResolveProxy(payload.Proxy))
 	writeJSON(w, http.StatusOK, map[string]any{
-		"id":    accountID,
-		"valid": valid,
-		"error": errText,
+		"id":      accountID,
+		"valid":   result.Valid,
+		"error":   result.ErrorMessage,
+		"deleted": result.Deleted,
 	})
 }
 
@@ -217,21 +218,55 @@ func (a *apiServer) handleBatchValidate(w http.ResponseWriter, req *http.Request
 	details := make([]map[string]any, 0, len(payload.IDs))
 	validCount := 0
 	invalidCount := 0
+	deletedCount := 0
 	for _, accountID := range payload.IDs {
-		valid, errText := runtime.ValidateAccountToken(req.Context(), a.store, accountID, runtime.ResolveProxy(payload.Proxy))
-		if valid {
+		result := a.validateAndDeleteInvalidAccount(req.Context(), accountID, runtime.ResolveProxy(payload.Proxy))
+		if result.Valid {
 			validCount++
 		} else {
 			invalidCount++
+			if result.Deleted {
+				deletedCount++
+			}
 		}
-		details = append(details, map[string]any{"id": accountID, "valid": valid, "error": errText})
+		details = append(details, map[string]any{
+			"id":      accountID,
+			"valid":   result.Valid,
+			"error":   result.ErrorMessage,
+			"deleted": result.Deleted,
+		})
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"valid_count":   validCount,
 		"invalid_count": invalidCount,
+		"deleted_count": deletedCount,
 		"details":       details,
 	})
+}
+
+func (a *apiServer) validateAndDeleteInvalidAccount(ctx context.Context, accountID int, proxyURL string) runtime.TokenValidationResult {
+	result := runtime.ValidateAccountToken(ctx, a.store, accountID, proxyURL)
+	if result.Valid || !result.ShouldDelete {
+		return result
+	}
+
+	if err := a.store.DeleteAccount(ctx, accountID); err != nil {
+		if strings.TrimSpace(result.ErrorMessage) == "" {
+			result.ErrorMessage = "删除账号失败: " + err.Error()
+		} else {
+			result.ErrorMessage += "；删除账号失败: " + err.Error()
+		}
+		return result
+	}
+
+	result.Deleted = true
+	if strings.TrimSpace(result.ErrorMessage) == "" {
+		result.ErrorMessage = "Token 无效，账号已删除"
+	} else {
+		result.ErrorMessage += "，账号已删除"
+	}
+	return result
 }
 
 func (a *apiServer) handleAccountCPAUpload(w http.ResponseWriter, req *http.Request, accountID int) {

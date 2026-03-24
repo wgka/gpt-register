@@ -27,6 +27,13 @@ type TokenRefreshResult struct {
 	UpdatedAt    time.Time `json:"-"`
 }
 
+type TokenValidationResult struct {
+	Valid        bool   `json:"valid"`
+	ErrorMessage string `json:"error,omitempty"`
+	ShouldDelete bool   `json:"-"`
+	Deleted      bool   `json:"deleted,omitempty"`
+}
+
 func RefreshAccountToken(ctx context.Context, db *store.SQLiteStore, accountID int, proxyURL string) TokenRefreshResult {
 	account, err := db.GetAccountTokensByID(ctx, accountID)
 	if err != nil {
@@ -59,16 +66,16 @@ func RefreshAccountToken(ctx context.Context, db *store.SQLiteStore, accountID i
 	return result
 }
 
-func ValidateAccountToken(ctx context.Context, db *store.SQLiteStore, accountID int, proxyURL string) (bool, string) {
+func ValidateAccountToken(ctx context.Context, db *store.SQLiteStore, accountID int, proxyURL string) TokenValidationResult {
 	account, err := db.GetAccountTokensByID(ctx, accountID)
 	if err != nil {
-		return false, err.Error()
+		return TokenValidationResult{ErrorMessage: err.Error()}
 	}
 	if account == nil {
-		return false, "账号不存在"
+		return TokenValidationResult{ErrorMessage: "账号不存在"}
 	}
 	if account.AccessToken == nil || strings.TrimSpace(*account.AccessToken) == "" {
-		return false, "账号没有 access_token"
+		return TokenValidationResult{ErrorMessage: "账号没有 access_token"}
 	}
 
 	manager := tokenRefreshManager{proxyURL: strings.TrimSpace(proxyURL)}
@@ -201,10 +208,19 @@ func (m tokenRefreshManager) refreshByOAuthToken(ctx context.Context, refreshTok
 	}
 }
 
-func (m tokenRefreshManager) validateToken(ctx context.Context, accessToken string) (bool, string) {
+func shouldDeleteAccountOnValidationStatus(statusCode int) bool {
+	switch statusCode {
+	case http.StatusUnauthorized, http.StatusForbidden:
+		return true
+	default:
+		return false
+	}
+}
+
+func (m tokenRefreshManager) validateToken(ctx context.Context, accessToken string) TokenValidationResult {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, tokenValidateURL, nil)
 	if err != nil {
-		return false, err.Error()
+		return TokenValidationResult{ErrorMessage: err.Error()}
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 	req.Header.Set("Accept", "application/json")
@@ -213,18 +229,24 @@ func (m tokenRefreshManager) validateToken(ctx context.Context, accessToken stri
 	client := newHTTPClient(m.proxyURL, 30*time.Second, true)
 	resp, err := client.Do(req)
 	if err != nil {
-		return false, "验证异常: " + err.Error()
+		return TokenValidationResult{ErrorMessage: "验证异常: " + err.Error()}
 	}
 	defer resp.Body.Close()
 
 	switch resp.StatusCode {
 	case http.StatusOK:
-		return true, ""
+		return TokenValidationResult{Valid: true}
 	case http.StatusUnauthorized:
-		return false, "Token 无效或已过期"
+		return TokenValidationResult{
+			ErrorMessage: "Token 无效或已过期",
+			ShouldDelete: shouldDeleteAccountOnValidationStatus(resp.StatusCode),
+		}
 	case http.StatusForbidden:
-		return false, "账号可能被封禁"
+		return TokenValidationResult{
+			ErrorMessage: "账号可能被封禁",
+			ShouldDelete: shouldDeleteAccountOnValidationStatus(resp.StatusCode),
+		}
 	default:
-		return false, fmt.Sprintf("验证失败: HTTP %d", resp.StatusCode)
+		return TokenValidationResult{ErrorMessage: fmt.Sprintf("验证失败: HTTP %d", resp.StatusCode)}
 	}
 }

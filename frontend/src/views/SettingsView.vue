@@ -78,7 +78,7 @@
             <el-switch v-model="form.cpa.enabled" inline-prompt active-text="开" inactive-text="关" />
           </el-form-item>
           <el-form-item label="CPA API URL">
-            <el-input v-model="form.cpa.api_url" clearable placeholder="http://host:port/v0/management/auth-files" />
+            <el-input v-model="form.cpa.api_url" clearable placeholder="http://host:port 或完整 /v0/management/auth-files 地址" />
           </el-form-item>
           <el-form-item label="CPA API Token">
             <el-input v-model="form.cpa.api_token" type="password" show-password clearable placeholder="输入 CPA Token" />

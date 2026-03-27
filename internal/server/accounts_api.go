@@ -283,8 +283,8 @@ func (a *apiServer) handleAccountCPAUpload(w http.ResponseWriter, req *http.Requ
 	}
 
 	cpaConfig := runtime.ResolveCPAConfig(req.Context(), a.store)
-	if !cpaConfig.Enabled {
-		writeJSON(w, http.StatusOK, map[string]any{"success": false, "error": "CPA 上传未启用"})
+	if strings.TrimSpace(cpaConfig.APIURL) == "" || strings.TrimSpace(cpaConfig.APIToken) == "" {
+		writeJSON(w, http.StatusOK, map[string]any{"success": false, "error": "CPA API URL 或 Token 未配置"})
 		return
 	}
 
@@ -319,12 +319,12 @@ func (a *apiServer) handleBatchCPAUpload(w http.ResponseWriter, req *http.Reques
 	}
 
 	cpaConfig := runtime.ResolveCPAConfig(req.Context(), a.store)
-	if !cpaConfig.Enabled {
+	if strings.TrimSpace(cpaConfig.APIURL) == "" || strings.TrimSpace(cpaConfig.APIToken) == "" {
 		writeJSON(w, http.StatusOK, map[string]any{
 			"success_count": 0,
 			"failed_count":  0,
 			"skipped_count": 0,
-			"details":       []map[string]any{{"success": false, "error": "CPA 上传未启用"}},
+			"details":       []map[string]any{{"success": false, "error": "CPA API URL 或 Token 未配置"}},
 		})
 		return
 	}

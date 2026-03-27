@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -151,7 +152,7 @@ func ResolveCPAConfig(ctx context.Context, db *store.SQLiteStore) CPAConfig {
 }
 
 func uploadToCPA(ctx context.Context, tokenData map[string]any, apiURL, apiToken, proxyURL string) (bool, string) {
-	apiURL = strings.TrimRight(strings.TrimSpace(apiURL), "/")
+	apiURL = normalizeCPAUploadEndpoint(apiURL)
 	apiToken = strings.TrimSpace(apiToken)
 	if apiURL == "" {
 		return false, "CPA API URL 未配置"
@@ -160,7 +161,7 @@ func uploadToCPA(ctx context.Context, tokenData map[string]any, apiURL, apiToken
 		return false, "CPA API Token 未配置"
 	}
 
-	uploadURL := apiURL + "/v0/management/auth-files"
+	uploadURL := apiURL
 	filename := fmt.Sprintf("%v.json", tokenData["email"])
 	content, err := json.MarshalIndent(tokenData, "", "  ")
 	if err != nil {
@@ -199,6 +200,29 @@ func uploadToCPA(ctx context.Context, tokenData map[string]any, apiURL, apiToken
 		return true, "上传成功"
 	}
 	return false, fmt.Sprintf("上传失败: HTTP %d", resp.StatusCode)
+}
+
+func normalizeCPAUploadEndpoint(raw string) string {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return ""
+	}
+
+	parsed, err := url.Parse(trimmed)
+	if err != nil || strings.TrimSpace(parsed.Scheme) == "" || strings.TrimSpace(parsed.Host) == "" {
+		return ""
+	}
+
+	pathname := strings.TrimRight(parsed.EscapedPath(), "/")
+	if pathname == "" {
+		pathname = "/v0/management/auth-files"
+	}
+
+	result := parsed.Scheme + "://" + parsed.Host + pathname
+	if strings.TrimSpace(parsed.RawQuery) != "" {
+		result += "?" + parsed.RawQuery
+	}
+	return result
 }
 
 func formatCPAOptionalTime(raw string) string {

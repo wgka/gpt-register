@@ -468,6 +468,11 @@ func (e *registrationEngine) run(ctx context.Context) RegistrationResult {
 }
 
 func (e *registrationEngine) checkIPLocation(ctx context.Context) (bool, string) {
+	if parseEnvBool(firstEnvValue("APP_SKIP_IP_CHECK", "SKIP_IP_CHECK")) {
+		e.logf("已启用跳过 IP 地区校验")
+		return true, "SKIPPED"
+	}
+
 	const maxRetries = 3
 	var body []byte
 	var statusCode int
@@ -747,16 +752,28 @@ func (e *registrationEngine) registerPassword(ctx context.Context) (string, stri
 	password := randomPassword(e.settings.DefaultPasswordLength)
 	payload := map[string]string{"password": password, "username": e.email}
 	body, _ := json.Marshal(payload)
+	sentinelToken, err := e.getSentinelToken(ctx, "oauth_create_account")
+	if err != nil {
+		return "", "", fmt.Errorf("get register sentinel token failed: %w", err)
+	}
 	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, "https://auth.openai.com/api/accounts/user/register", strings.NewReader(string(body)))
 	req.Header = browserHeaders(http.Header{
-		"referer":         {"https://auth.openai.com/create-account/password"},
-		"origin":          {"https://auth.openai.com"},
-		"accept":          {"application/json"},
-		"content-type":    {"application/json"},
-		"accept-language": {"en-US,en;q=0.9"},
-		"user-agent":      {userAgent()},
-	}, "referer", "origin", "accept", "content-type", "accept-language", "user-agent")
-	req.Header.Set("openai-sentinel-token", e.buildRegisterSentinelToken(ctx))
+		"referer":            {"https://auth.openai.com/create-account/password"},
+		"origin":             {"https://auth.openai.com"},
+		"accept":             {"application/json"},
+		"content-type":       {"application/json"},
+		"accept-language":    {"en-US,en;q=0.9"},
+		"accept-encoding":    {"gzip, deflate, br"},
+		"priority":           {"u=1, i"},
+		"sec-ch-ua":          {secCHUA()},
+		"sec-ch-ua-mobile":   {"?0"},
+		"sec-ch-ua-platform": {`"Windows"`},
+		"sec-fetch-dest":     {"empty"},
+		"sec-fetch-mode":     {"cors"},
+		"sec-fetch-site":     {"same-origin"},
+		"user-agent":         {userAgent()},
+	}, "referer", "origin", "accept", "content-type", "accept-language", "accept-encoding", "priority", "sec-ch-ua", "sec-ch-ua-mobile", "sec-ch-ua-platform", "sec-fetch-dest", "sec-fetch-mode", "sec-fetch-site", "user-agent")
+	req.Header.Set("openai-sentinel-token", sentinelToken)
 	resp, err := e.client.Do(req)
 	if err != nil {
 		return "", "", err
@@ -801,12 +818,21 @@ func (e *registrationEngine) validateVerificationCode(ctx context.Context, code 
 	body := fmt.Sprintf(`{"code":"%s"}`, code)
 	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, "https://auth.openai.com/api/accounts/email-otp/validate", strings.NewReader(body))
 	req.Header = browserHeaders(http.Header{
-		"referer":         {"https://auth.openai.com/email-verification"},
-		"accept":          {"application/json"},
-		"content-type":    {"application/json"},
-		"accept-language": {"en-US,en;q=0.9"},
-		"user-agent":      {userAgent()},
-	}, "referer", "accept", "content-type", "accept-language", "user-agent")
+		"referer":            {"https://auth.openai.com/email-verification"},
+		"origin":             {"https://auth.openai.com"},
+		"accept":             {"application/json"},
+		"content-type":       {"application/json"},
+		"accept-language":    {"en-US,en;q=0.9"},
+		"accept-encoding":    {"gzip, deflate, br"},
+		"priority":           {"u=1, i"},
+		"sec-ch-ua":          {secCHUA()},
+		"sec-ch-ua-mobile":   {"?0"},
+		"sec-ch-ua-platform": {`"Windows"`},
+		"sec-fetch-dest":     {"empty"},
+		"sec-fetch-mode":     {"cors"},
+		"sec-fetch-site":     {"same-origin"},
+		"user-agent":         {userAgent()},
+	}, "referer", "origin", "accept", "content-type", "accept-language", "accept-encoding", "priority", "sec-ch-ua", "sec-ch-ua-mobile", "sec-ch-ua-platform", "sec-fetch-dest", "sec-fetch-mode", "sec-fetch-site", "user-agent")
 	resp, err := e.client.Do(req)
 	if err != nil {
 		return "", err
@@ -826,16 +852,28 @@ func (e *registrationEngine) createUserAccount(ctx context.Context) (string, err
 		"birthdate": randomBirthdate(),
 	}
 	body, _ := json.Marshal(payload)
+	sentinelToken, err := e.getSentinelToken(ctx, "oauth_create_account")
+	if err != nil {
+		return "", fmt.Errorf("get create_account sentinel token failed: %w", err)
+	}
 	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, "https://auth.openai.com/api/accounts/create_account", strings.NewReader(string(body)))
 	req.Header = browserHeaders(http.Header{
-		"referer":         {"https://auth.openai.com/about-you"},
-		"origin":          {"https://auth.openai.com"},
-		"accept":          {"application/json"},
-		"content-type":    {"application/json"},
-		"accept-language": {"en-US,en;q=0.9"},
-		"user-agent":      {userAgent()},
-	}, "referer", "origin", "accept", "content-type", "accept-language", "user-agent")
-	req.Header.Set("openai-sentinel-token", e.createLightweightSentinelToken())
+		"referer":            {"https://auth.openai.com/about-you"},
+		"origin":             {"https://auth.openai.com"},
+		"accept":             {"application/json"},
+		"content-type":       {"application/json"},
+		"accept-language":    {"en-US,en;q=0.9"},
+		"accept-encoding":    {"gzip, deflate, br"},
+		"priority":           {"u=1, i"},
+		"sec-ch-ua":          {secCHUA()},
+		"sec-ch-ua-mobile":   {"?0"},
+		"sec-ch-ua-platform": {`"Windows"`},
+		"sec-fetch-dest":     {"empty"},
+		"sec-fetch-mode":     {"cors"},
+		"sec-fetch-site":     {"same-origin"},
+		"user-agent":         {userAgent()},
+	}, "referer", "origin", "accept", "content-type", "accept-language", "accept-encoding", "priority", "sec-ch-ua", "sec-ch-ua-mobile", "sec-ch-ua-platform", "sec-fetch-dest", "sec-fetch-mode", "sec-fetch-site", "user-agent")
+	req.Header.Set("openai-sentinel-token", sentinelToken)
 	resp, err := e.client.Do(req)
 	if err != nil {
 		return "", err
@@ -1203,6 +1241,7 @@ func (e *registrationEngine) workspaceAPIGET(ctx context.Context, endpoint, refe
 		"referer":            {referer},
 		"origin":             {origin},
 		"accept":             {"application/json"},
+		"oai-language":       {"zh-CN"},
 		"accept-language":    {"en-US,en;q=0.9"},
 		"accept-encoding":    {"gzip, deflate, br"},
 		"user-agent":         {userAgent()},
@@ -1212,7 +1251,7 @@ func (e *registrationEngine) workspaceAPIGET(ctx context.Context, endpoint, refe
 		"sec-fetch-dest":     {"empty"},
 		"sec-fetch-mode":     {"cors"},
 		"sec-fetch-site":     {secFetchSite},
-	}, "referer", "origin", "accept", "accept-language", "accept-encoding", "user-agent", "sec-ch-ua", "sec-ch-ua-mobile", "sec-ch-ua-platform", "sec-fetch-dest", "sec-fetch-mode", "sec-fetch-site")
+	}, "referer", "origin", "accept", "oai-language", "accept-language", "accept-encoding", "user-agent", "sec-ch-ua", "sec-ch-ua-mobile", "sec-ch-ua-platform", "sec-fetch-dest", "sec-fetch-mode", "sec-fetch-site")
 	resp, err := e.client.Do(req)
 	if err != nil {
 		return nil, 0, err
@@ -1351,7 +1390,7 @@ func (e *registrationEngine) fetchWorkspaceIDFromAPI(ctx context.Context) (strin
 			extractWorkspaceFromBackendMe,
 		},
 		{
-			"https://chatgpt.com/backend-api/accounts/check/v4-2023-04-27",
+			buildAccountsCheckURL(),
 			"https://chatgpt.com/", "https://chatgpt.com", "same-origin",
 			extractWorkspaceFromAccountsCheck,
 		},
@@ -2662,6 +2701,20 @@ func generateDeviceIDUUID() string {
 	b[6] = (b[6] & 0x0f) | 0x40
 	b[8] = (b[8] & 0x3f) | 0x80
 	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
+}
+
+func buildAccountsCheckURL() string {
+	query := url.Values{
+		"timezone_offset_min": {strconv.Itoa(currentTimezoneOffsetMinutes())},
+	}
+	return "https://chatgpt.com/backend-api/accounts/check/v4-2023-04-27?" + query.Encode()
+}
+
+// currentTimezoneOffsetMinutes mirrors JavaScript Date#getTimezoneOffset():
+// UTC - local time, in minutes. Asia/Shanghai therefore becomes -480.
+func currentTimezoneOffsetMinutes() int {
+	_, offsetSeconds := time.Now().Zone()
+	return -(offsetSeconds / 60)
 }
 
 func randomURLSafeToken(nbytes int) string {

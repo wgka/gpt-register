@@ -12,6 +12,9 @@
 - 注册邮箱默认走临时邮箱 API，可通过 `TEMP_MAIL_API_BASE_URL` 覆盖地址
 - 代理配置二选一：固定代理填 `APP_PROXY_URL`；动态代理池接口才填 `APP_PROXY_API_URL`
 - 本地 Clash/7897 这类代理端口不要填到 `APP_PROXY_API_URL`，否则程序会把它当 JSON 接口请求
+- 授权链路可通过 `APP_AUTH_MODE` 选择：
+  - `chatgpt_web`：ChatGPT 网页登录链路
+  - `codex_cli`：Codex/CLI 风格 OAuth 参数（PKCE + `http://localhost:1455/auth/callback`）
 
 3) 构建前端并运行服务
 

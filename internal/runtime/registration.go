@@ -34,6 +34,8 @@ const (
 	chatGPTWebRedirectURI    = "https://chatgpt.com/api/auth/callback/openai"
 	chatGPTWebAudience       = "https://api.openai.com/v1"
 	chatGPTWebScope          = "openid email profile offline_access model.request model.read organization.read organization.write"
+	authModeChatGPTWeb       = "chatgpt_web"
+	authModeCodexCLI         = "codex_cli"
 	otpPattern               = `\b(\d{6})\b`
 )
 
@@ -156,6 +158,7 @@ type engineSettings struct {
 	OpenAITokenURL        string
 	OpenAIRedirectURI     string
 	OpenAIScope           string
+	AuthMode              string
 	DefaultPasswordLength int
 	EmailCodeTimeout      int
 }
@@ -253,27 +256,54 @@ func (e *registrationEngine) run(ctx context.Context) RegistrationResult {
 	result.Email = e.email
 	e.logf("邮箱已创建: " + e.email)
 
-	e.logf("预热 ChatGPT 首页会话")
-	if err := e.bootstrapChatGPT(ctx); err != nil {
-		e.logf("首页预热失败，继续当前授权链路: " + err.Error())
+	e.logf("授权模式: " + normalizeAuthMode(e.settings.AuthMode))
+	if e.usesCodexCLIOAuth() {
+		e.oauthStart = startOAuth(e.settings)
+		e.oauthState = e.oauthStart.State
+		e.logf("Codex/CLI OAuth 已初始化")
+
+		if _, err := e.getDeviceID(ctx); err != nil {
+			result.ErrorMessage = err.Error()
+			return result
+		}
+		e.logf("CLI Auth 会话已建立")
+
+		sentinelToken, err := e.checkSentinel(ctx)
+		if err != nil {
+			result.ErrorMessage = err.Error()
+			return result
+		}
+		pageType, err := e.submitSignup(ctx, sentinelToken)
+		if err != nil {
+			result.ErrorMessage = err.Error()
+			return result
+		}
+		if trimmed := strings.TrimSpace(pageType); trimmed != "" {
+			e.logf("authorize/continue 页面类型: " + trimmed)
+		}
 	} else {
-		e.logf("首页预热完成")
-	}
+		e.logf("预热 ChatGPT 首页会话")
+		if err := e.bootstrapChatGPT(ctx); err != nil {
+			e.logf("首页预热失败，继续当前授权链路: " + err.Error())
+		} else {
+			e.logf("首页预热完成")
+		}
 
-	e.authSessionID = generateDeviceIDUUID()
-	e.logf("ChatGPT signin 已初始化")
+		e.authSessionID = generateDeviceIDUUID()
+		e.logf("ChatGPT signin 已初始化")
 
-	if err := e.initiateChatGPTSignin(ctx); err != nil {
-		result.ErrorMessage = err.Error()
-		return result
-	}
-	e.logf("已获取 authorize_url")
+		if err := e.initiateChatGPTSignin(ctx); err != nil {
+			result.ErrorMessage = err.Error()
+			return result
+		}
+		e.logf("已获取 authorize_url")
 
-	if err := e.followChatGPTAuthorize(ctx); err != nil {
-		result.ErrorMessage = err.Error()
-		return result
+		if err := e.followChatGPTAuthorize(ctx); err != nil {
+			result.ErrorMessage = err.Error()
+			return result
+		}
+		e.logf("Auth 会话已建立")
 	}
-	e.logf("Auth 会话已建立")
 
 	e.logf("提交密码")
 	password, pageType, err := e.registerPassword(ctx)
@@ -348,10 +378,11 @@ func (e *registrationEngine) run(ctx context.Context) RegistrationResult {
 	}
 
 	if strings.TrimSpace(callbackURL) == "" {
-		e.logf("continue_url 未直接产出回调，尝试 ChatGPT oauth2/auth 回退")
-		callbackURL, err = e.followRedirects(ctx, e.buildChatGPTWebOAuthURL())
+		fallbackURL, fallbackLabel := e.buildAuthorizationFallbackURL()
+		e.logf("continue_url 未直接产出回调，尝试 " + fallbackLabel + " 回退")
+		callbackURL, err = e.followRedirects(ctx, fallbackURL)
 		if err != nil {
-			e.logf("ChatGPT oauth2/auth 回退失败: " + err.Error())
+			e.logf(fallbackLabel + " 回退失败: " + err.Error())
 		}
 	}
 	if strings.TrimSpace(callbackURL) != "" {
@@ -377,7 +408,8 @@ func (e *registrationEngine) run(ctx context.Context) RegistrationResult {
 		}
 	}
 
-	if e.hasChatGPTSessionToken() || strings.TrimSpace(callbackURL) == "" || isChatGPTWebCallback {
+	shouldTrySessionSync := e.hasChatGPTSessionToken() || isChatGPTWebCallback || (!e.usesCodexCLIOAuth() && strings.TrimSpace(callbackURL) == "")
+	if shouldTrySessionSync {
 		e.logf("同步 ChatGPT Session")
 		if isChatGPTWebCallback {
 			sessionTokenInfo, sessionWorkspaceID, sessionSyncErr = e.fetchChatGPTSessionTokenInfoWithRetry(ctx, 3, 400*time.Millisecond)
@@ -419,6 +451,8 @@ func (e *registrationEngine) run(ctx context.Context) RegistrationResult {
 		if strings.TrimSpace(sessionTokenInfo.AccessToken) == "" {
 			if isChatGPTWebCallback && sessionSyncErr != nil {
 				result.ErrorMessage = "chatgpt web callback reached, but session sync failed: " + sessionSyncErr.Error()
+			} else if e.usesCodexCLIOAuth() {
+				result.ErrorMessage = "codex/cli oauth callback not captured and no session fallback is available"
 			} else {
 				result.ErrorMessage = "chatgpt web callback reached, but accessToken is still unavailable"
 			}
@@ -458,6 +492,7 @@ func (e *registrationEngine) run(ctx context.Context) RegistrationResult {
 		"registered_at":       time.Now().Format(time.RFC3339),
 		"is_existing_account": e.isExisting,
 		"session_fallback":    usedSessionFallback,
+		"auth_mode":           normalizeAuthMode(e.settings.AuthMode),
 	}
 	if result.BindCardURL != "" {
 		result.Metadata["bind_card_url"] = result.BindCardURL
@@ -1035,6 +1070,10 @@ func (e *registrationEngine) isKnownOAuthCallbackURL(rawURL string) bool {
 	return isOAuthCallbackURL(rawURL, e.settings.OpenAIRedirectURI) || isOAuthCallbackURL(rawURL, chatGPTWebRedirectURI)
 }
 
+func (e *registrationEngine) usesCodexCLIOAuth() bool {
+	return normalizeAuthMode(e.settings.AuthMode) == authModeCodexCLI
+}
+
 func isConsentContinueURL(rawURL string) bool {
 	lower := strings.ToLower(strings.TrimSpace(rawURL))
 	return strings.Contains(lower, "/consent") || strings.Contains(lower, "sign-in-with-chatgpt")
@@ -1046,6 +1085,9 @@ func isAddPhoneContinueURL(rawURL string) bool {
 }
 
 func (e *registrationEngine) buildConsentOAuthURL() string {
+	if strings.TrimSpace(e.oauthStart.State) == "" || strings.TrimSpace(e.oauthStart.CodeVerifier) == "" {
+		e.oauthStart = startOAuth(e.settings)
+	}
 	codeChallenge := sha256Base64URL(e.oauthStart.CodeVerifier)
 	query := url.Values{
 		"client_id":                  []string{e.settings.OpenAIClientID},
@@ -2203,6 +2245,13 @@ func (e *registrationEngine) buildChatGPTWebOAuthURL() string {
 	return "https://auth.openai.com/api/oauth/oauth2/auth?" + query.Encode()
 }
 
+func (e *registrationEngine) buildAuthorizationFallbackURL() (string, string) {
+	if e.usesCodexCLIOAuth() {
+		return e.buildConsentOAuthURL(), "Codex/CLI OAuth"
+	}
+	return e.buildChatGPTWebOAuthURL(), "ChatGPT oauth2/auth"
+}
+
 func (e *registrationEngine) visitChatGPTWebCallback(ctx context.Context, callbackURL string) error {
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, callbackURL, nil)
 	req.Header = browserHeaders(http.Header{
@@ -2432,23 +2481,27 @@ func (e *registrationEngine) createLightweightSentinelToken() string {
 }
 
 func loadEngineSettings(ctx context.Context, db *store.SQLiteStore) (engineSettings, error) {
-	clientID, err := db.GetSettingString(ctx, "openai.client_id", defaultOpenAIClientID)
+	authMode, err := getRuntimeSettingString(ctx, db, "auth.mode", authModeChatGPTWeb, "APP_AUTH_MODE", "AUTH_MODE")
 	if err != nil {
 		return engineSettings{}, err
 	}
-	authURL, err := db.GetSettingString(ctx, "openai.auth_url", defaultOpenAIAuthURL)
+	clientID, err := getRuntimeSettingString(ctx, db, "openai.client_id", defaultOpenAIClientID, "APP_OPENAI_CLIENT_ID", "OPENAI_CLIENT_ID")
 	if err != nil {
 		return engineSettings{}, err
 	}
-	tokenURL, err := db.GetSettingString(ctx, "openai.token_url", defaultOpenAITokenURL)
+	authURL, err := getRuntimeSettingString(ctx, db, "openai.auth_url", defaultOpenAIAuthURL, "APP_OPENAI_AUTH_URL", "OPENAI_AUTH_URL")
 	if err != nil {
 		return engineSettings{}, err
 	}
-	redirectURI, err := db.GetSettingString(ctx, "openai.redirect_uri", defaultOpenAIRedirectURI)
+	tokenURL, err := getRuntimeSettingString(ctx, db, "openai.token_url", defaultOpenAITokenURL, "APP_OPENAI_TOKEN_URL", "OPENAI_TOKEN_URL")
 	if err != nil {
 		return engineSettings{}, err
 	}
-	scope, err := db.GetSettingString(ctx, "openai.scope", defaultOpenAIScope)
+	redirectURI, err := getRuntimeSettingString(ctx, db, "openai.redirect_uri", defaultOpenAIRedirectURI, "APP_OPENAI_REDIRECT_URI", "OPENAI_REDIRECT_URI")
+	if err != nil {
+		return engineSettings{}, err
+	}
+	scope, err := getRuntimeSettingString(ctx, db, "openai.scope", defaultOpenAIScope, "APP_OPENAI_SCOPE", "OPENAI_SCOPE")
 	if err != nil {
 		return engineSettings{}, err
 	}
@@ -2467,9 +2520,28 @@ func loadEngineSettings(ctx context.Context, db *store.SQLiteStore) (engineSetti
 		OpenAITokenURL:        tokenURL,
 		OpenAIRedirectURI:     redirectURI,
 		OpenAIScope:           scope,
+		AuthMode:              normalizeAuthMode(authMode),
 		DefaultPasswordLength: passwordLength,
 		EmailCodeTimeout:      emailCodeTimeout,
 	}, nil
+}
+
+func getRuntimeSettingString(ctx context.Context, db *store.SQLiteStore, dbKey, fallback string, envKeys ...string) (string, error) {
+	if value := strings.TrimSpace(firstEnvValue(envKeys...)); value != "" {
+		return value, nil
+	}
+	return db.GetSettingString(ctx, dbKey, fallback)
+}
+
+func normalizeAuthMode(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case authModeCodexCLI, "codex", "codex-cli", "cli":
+		return authModeCodexCLI
+	case "", authModeChatGPTWeb, "chatgpt", "chatgpt-web", "web":
+		return authModeChatGPTWeb
+	default:
+		return authModeChatGPTWeb
+	}
 }
 
 func startOAuth(settings engineSettings) oauthStart {

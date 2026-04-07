@@ -173,6 +173,47 @@ async function runRowAction(account, action, reloadDetail = false) {
         actionLoading[account.id] = '';
     }
 }
+async function runCodexReauthorize(account, reloadDetail = false) {
+    try {
+        await ElMessageBox.confirm(`将使用保存的密码为 ${account.email} 手动执行 Codex/CLI 授权，并在成功后自动上报 CPA，是否继续？`, 'Codex/CLI 授权确认', { type: 'warning' });
+    }
+    catch {
+        return;
+    }
+    actionLoading[account.id] = 'reauthorize-codex';
+    try {
+        const response = await fetch(`/api/accounts/${account.id}/reauthorize-codex`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ upload_cpa: true }),
+        });
+        if (!response.ok) {
+            throw new Error('request failed');
+        }
+        const payload = (await response.json());
+        if (payload.success) {
+            ElMessage.success(payload.message || 'Codex/CLI 授权已更新');
+        }
+        else if (payload.auth_updated) {
+            ElMessage.warning(payload.error || 'Codex/CLI 授权已更新，但 CPA 上报失败');
+        }
+        else {
+            ElMessage.error(payload.error || 'Codex/CLI 授权失败');
+        }
+        await refreshAll();
+        if (reloadDetail && selectedAccount.value?.id === account.id) {
+            await openDetail(account.id);
+        }
+    }
+    catch {
+        ElMessage.error('Codex/CLI 授权失败');
+    }
+    finally {
+        actionLoading[account.id] = '';
+    }
+}
 async function runBatchAction(action) {
     if (selectedIds.value.length === 0) {
         return;
@@ -1057,25 +1098,53 @@ const { default: __VLS_178 } = __VLS_176.slots;
     const __VLS_205 = __VLS_asFunctionalComponent1(__VLS_204, new __VLS_204({
         ...{ 'onClick': {} },
         link: true,
-        type: "info",
+        type: "danger",
+        loading: (__VLS_ctx.actionLoading[row.id] === 'reauthorize-codex'),
     }));
     const __VLS_206 = __VLS_205({
         ...{ 'onClick': {} },
         link: true,
-        type: "info",
+        type: "danger",
+        loading: (__VLS_ctx.actionLoading[row.id] === 'reauthorize-codex'),
     }, ...__VLS_functionalComponentArgsRest(__VLS_205));
     let __VLS_209;
     const __VLS_210 = ({ click: {} },
         { onClick: (...[$event]) => {
-                __VLS_ctx.openDetail(row.id);
+                __VLS_ctx.runCodexReauthorize(row);
                 // @ts-ignore
-                [openDetail,];
+                [actionLoading, runCodexReauthorize,];
             } });
     const { default: __VLS_211 } = __VLS_207.slots;
     // @ts-ignore
     [];
     var __VLS_207;
     var __VLS_208;
+    let __VLS_212;
+    /** @ts-ignore @type {typeof __VLS_components.elButton | typeof __VLS_components.ElButton | typeof __VLS_components.elButton | typeof __VLS_components.ElButton} */
+    elButton;
+    // @ts-ignore
+    const __VLS_213 = __VLS_asFunctionalComponent1(__VLS_212, new __VLS_212({
+        ...{ 'onClick': {} },
+        link: true,
+        type: "info",
+    }));
+    const __VLS_214 = __VLS_213({
+        ...{ 'onClick': {} },
+        link: true,
+        type: "info",
+    }, ...__VLS_functionalComponentArgsRest(__VLS_213));
+    let __VLS_217;
+    const __VLS_218 = ({ click: {} },
+        { onClick: (...[$event]) => {
+                __VLS_ctx.openDetail(row.id);
+                // @ts-ignore
+                [openDetail,];
+            } });
+    const { default: __VLS_219 } = __VLS_215.slots;
+    // @ts-ignore
+    [];
+    var __VLS_215;
+    var __VLS_216;
     // @ts-ignore
     [];
 }
@@ -1090,11 +1159,11 @@ __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
     ...{ class: "pagination" },
 });
 /** @type {__VLS_StyleScopedClasses['pagination']} */ ;
-let __VLS_212;
+let __VLS_220;
 /** @ts-ignore @type {typeof __VLS_components.elPagination | typeof __VLS_components.ElPagination} */
 elPagination;
 // @ts-ignore
-const __VLS_213 = __VLS_asFunctionalComponent1(__VLS_212, new __VLS_212({
+const __VLS_221 = __VLS_asFunctionalComponent1(__VLS_220, new __VLS_220({
     ...{ 'onCurrentChange': {} },
     ...{ 'onSizeChange': {} },
     currentPage: (__VLS_ctx.filters.page),
@@ -1104,7 +1173,7 @@ const __VLS_213 = __VLS_asFunctionalComponent1(__VLS_212, new __VLS_212({
     background: true,
     layout: "total, sizes, prev, pager, next",
 }));
-const __VLS_214 = __VLS_213({
+const __VLS_222 = __VLS_221({
     ...{ 'onCurrentChange': {} },
     ...{ 'onSizeChange': {} },
     currentPage: (__VLS_ctx.filters.page),
@@ -1113,32 +1182,32 @@ const __VLS_214 = __VLS_213({
     total: (__VLS_ctx.total),
     background: true,
     layout: "total, sizes, prev, pager, next",
-}, ...__VLS_functionalComponentArgsRest(__VLS_213));
-let __VLS_217;
-const __VLS_218 = ({ currentChange: {} },
+}, ...__VLS_functionalComponentArgsRest(__VLS_221));
+let __VLS_225;
+const __VLS_226 = ({ currentChange: {} },
     { onCurrentChange: (__VLS_ctx.handlePageChange) });
-const __VLS_219 = ({ sizeChange: {} },
+const __VLS_227 = ({ sizeChange: {} },
     { onSizeChange: (__VLS_ctx.handlePageSizeChange) });
-var __VLS_215;
-var __VLS_216;
+var __VLS_223;
+var __VLS_224;
 // @ts-ignore
 [filters, filters, total, handlePageChange, handlePageSizeChange,];
 var __VLS_27;
-let __VLS_220;
+let __VLS_228;
 /** @ts-ignore @type {typeof __VLS_components.elDrawer | typeof __VLS_components.ElDrawer | typeof __VLS_components.elDrawer | typeof __VLS_components.ElDrawer} */
 elDrawer;
 // @ts-ignore
-const __VLS_221 = __VLS_asFunctionalComponent1(__VLS_220, new __VLS_220({
+const __VLS_229 = __VLS_asFunctionalComponent1(__VLS_228, new __VLS_228({
     modelValue: (__VLS_ctx.detailVisible),
     title: "账号详情",
     size: "520px",
 }));
-const __VLS_222 = __VLS_221({
+const __VLS_230 = __VLS_229({
     modelValue: (__VLS_ctx.detailVisible),
     title: "账号详情",
     size: "520px",
-}, ...__VLS_functionalComponentArgsRest(__VLS_221));
-const { default: __VLS_225 } = __VLS_223.slots;
+}, ...__VLS_functionalComponentArgsRest(__VLS_229));
+const { default: __VLS_233 } = __VLS_231.slots;
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
     ...{ class: "detail-panel" },
 });
@@ -1157,75 +1226,45 @@ if (__VLS_ctx.selectedAccount) {
     });
     /** @type {__VLS_StyleScopedClasses['detail-header__subtitle']} */ ;
     (__VLS_ctx.serviceLabel(__VLS_ctx.selectedAccount.email_service));
-    let __VLS_226;
+    let __VLS_234;
     /** @ts-ignore @type {typeof __VLS_components.elTag | typeof __VLS_components.ElTag | typeof __VLS_components.elTag | typeof __VLS_components.ElTag} */
     elTag;
     // @ts-ignore
-    const __VLS_227 = __VLS_asFunctionalComponent1(__VLS_226, new __VLS_226({
+    const __VLS_235 = __VLS_asFunctionalComponent1(__VLS_234, new __VLS_234({
         type: (__VLS_ctx.statusTagType(__VLS_ctx.selectedAccount.status)),
     }));
-    const __VLS_228 = __VLS_227({
+    const __VLS_236 = __VLS_235({
         type: (__VLS_ctx.statusTagType(__VLS_ctx.selectedAccount.status)),
-    }, ...__VLS_functionalComponentArgsRest(__VLS_227));
-    const { default: __VLS_231 } = __VLS_229.slots;
+    }, ...__VLS_functionalComponentArgsRest(__VLS_235));
+    const { default: __VLS_239 } = __VLS_237.slots;
     (__VLS_ctx.selectedAccount.status);
     // @ts-ignore
     [vLoading, serviceLabel, statusTagType, detailVisible, detailLoading, selectedAccount, selectedAccount, selectedAccount, selectedAccount, selectedAccount,];
-    var __VLS_229;
+    var __VLS_237;
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
         ...{ class: "detail-actions" },
     });
     /** @type {__VLS_StyleScopedClasses['detail-actions']} */ ;
-    let __VLS_232;
-    /** @ts-ignore @type {typeof __VLS_components.elButton | typeof __VLS_components.ElButton | typeof __VLS_components.elButton | typeof __VLS_components.ElButton} */
-    elButton;
-    // @ts-ignore
-    const __VLS_233 = __VLS_asFunctionalComponent1(__VLS_232, new __VLS_232({
-        ...{ 'onClick': {} },
-        type: "primary",
-        loading: (__VLS_ctx.actionLoading[__VLS_ctx.selectedAccount.id] === 'refresh'),
-    }));
-    const __VLS_234 = __VLS_233({
-        ...{ 'onClick': {} },
-        type: "primary",
-        loading: (__VLS_ctx.actionLoading[__VLS_ctx.selectedAccount.id] === 'refresh'),
-    }, ...__VLS_functionalComponentArgsRest(__VLS_233));
-    let __VLS_237;
-    const __VLS_238 = ({ click: {} },
-        { onClick: (...[$event]) => {
-                if (!(__VLS_ctx.selectedAccount))
-                    return;
-                __VLS_ctx.runRowAction(__VLS_ctx.selectedAccount, 'refresh', true);
-                // @ts-ignore
-                [actionLoading, runRowAction, selectedAccount, selectedAccount,];
-            } });
-    const { default: __VLS_239 } = __VLS_235.slots;
-    // @ts-ignore
-    [];
-    var __VLS_235;
-    var __VLS_236;
     let __VLS_240;
     /** @ts-ignore @type {typeof __VLS_components.elButton | typeof __VLS_components.ElButton | typeof __VLS_components.elButton | typeof __VLS_components.ElButton} */
     elButton;
     // @ts-ignore
     const __VLS_241 = __VLS_asFunctionalComponent1(__VLS_240, new __VLS_240({
         ...{ 'onClick': {} },
-        type: "success",
-        plain: true,
-        loading: (__VLS_ctx.actionLoading[__VLS_ctx.selectedAccount.id] === 'validate'),
+        type: "primary",
+        loading: (__VLS_ctx.actionLoading[__VLS_ctx.selectedAccount.id] === 'refresh'),
     }));
     const __VLS_242 = __VLS_241({
         ...{ 'onClick': {} },
-        type: "success",
-        plain: true,
-        loading: (__VLS_ctx.actionLoading[__VLS_ctx.selectedAccount.id] === 'validate'),
+        type: "primary",
+        loading: (__VLS_ctx.actionLoading[__VLS_ctx.selectedAccount.id] === 'refresh'),
     }, ...__VLS_functionalComponentArgsRest(__VLS_241));
     let __VLS_245;
     const __VLS_246 = ({ click: {} },
         { onClick: (...[$event]) => {
                 if (!(__VLS_ctx.selectedAccount))
                     return;
-                __VLS_ctx.runRowAction(__VLS_ctx.selectedAccount, 'validate', true);
+                __VLS_ctx.runRowAction(__VLS_ctx.selectedAccount, 'refresh', true);
                 // @ts-ignore
                 [actionLoading, runRowAction, selectedAccount, selectedAccount,];
             } });
@@ -1240,22 +1279,22 @@ if (__VLS_ctx.selectedAccount) {
     // @ts-ignore
     const __VLS_249 = __VLS_asFunctionalComponent1(__VLS_248, new __VLS_248({
         ...{ 'onClick': {} },
-        type: "warning",
+        type: "success",
         plain: true,
-        loading: (__VLS_ctx.actionLoading[__VLS_ctx.selectedAccount.id] === 'upload-cpa'),
+        loading: (__VLS_ctx.actionLoading[__VLS_ctx.selectedAccount.id] === 'validate'),
     }));
     const __VLS_250 = __VLS_249({
         ...{ 'onClick': {} },
-        type: "warning",
+        type: "success",
         plain: true,
-        loading: (__VLS_ctx.actionLoading[__VLS_ctx.selectedAccount.id] === 'upload-cpa'),
+        loading: (__VLS_ctx.actionLoading[__VLS_ctx.selectedAccount.id] === 'validate'),
     }, ...__VLS_functionalComponentArgsRest(__VLS_249));
     let __VLS_253;
     const __VLS_254 = ({ click: {} },
         { onClick: (...[$event]) => {
                 if (!(__VLS_ctx.selectedAccount))
                     return;
-                __VLS_ctx.runRowAction(__VLS_ctx.selectedAccount, 'upload-cpa', true);
+                __VLS_ctx.runRowAction(__VLS_ctx.selectedAccount, 'validate', true);
                 // @ts-ignore
                 [actionLoading, runRowAction, selectedAccount, selectedAccount,];
             } });
@@ -1270,26 +1309,86 @@ if (__VLS_ctx.selectedAccount) {
     // @ts-ignore
     const __VLS_257 = __VLS_asFunctionalComponent1(__VLS_256, new __VLS_256({
         ...{ 'onClick': {} },
-        type: "info",
+        type: "warning",
         plain: true,
-        loading: (__VLS_ctx.linkRegenerating),
-        disabled: (!__VLS_ctx.selectedTokens.access_token),
+        loading: (__VLS_ctx.actionLoading[__VLS_ctx.selectedAccount.id] === 'upload-cpa'),
     }));
     const __VLS_258 = __VLS_257({
+        ...{ 'onClick': {} },
+        type: "warning",
+        plain: true,
+        loading: (__VLS_ctx.actionLoading[__VLS_ctx.selectedAccount.id] === 'upload-cpa'),
+    }, ...__VLS_functionalComponentArgsRest(__VLS_257));
+    let __VLS_261;
+    const __VLS_262 = ({ click: {} },
+        { onClick: (...[$event]) => {
+                if (!(__VLS_ctx.selectedAccount))
+                    return;
+                __VLS_ctx.runRowAction(__VLS_ctx.selectedAccount, 'upload-cpa', true);
+                // @ts-ignore
+                [actionLoading, runRowAction, selectedAccount, selectedAccount,];
+            } });
+    const { default: __VLS_263 } = __VLS_259.slots;
+    // @ts-ignore
+    [];
+    var __VLS_259;
+    var __VLS_260;
+    let __VLS_264;
+    /** @ts-ignore @type {typeof __VLS_components.elButton | typeof __VLS_components.ElButton | typeof __VLS_components.elButton | typeof __VLS_components.ElButton} */
+    elButton;
+    // @ts-ignore
+    const __VLS_265 = __VLS_asFunctionalComponent1(__VLS_264, new __VLS_264({
+        ...{ 'onClick': {} },
+        type: "danger",
+        plain: true,
+        loading: (__VLS_ctx.actionLoading[__VLS_ctx.selectedAccount.id] === 'reauthorize-codex'),
+    }));
+    const __VLS_266 = __VLS_265({
+        ...{ 'onClick': {} },
+        type: "danger",
+        plain: true,
+        loading: (__VLS_ctx.actionLoading[__VLS_ctx.selectedAccount.id] === 'reauthorize-codex'),
+    }, ...__VLS_functionalComponentArgsRest(__VLS_265));
+    let __VLS_269;
+    const __VLS_270 = ({ click: {} },
+        { onClick: (...[$event]) => {
+                if (!(__VLS_ctx.selectedAccount))
+                    return;
+                __VLS_ctx.runCodexReauthorize(__VLS_ctx.selectedAccount, true);
+                // @ts-ignore
+                [actionLoading, runCodexReauthorize, selectedAccount, selectedAccount,];
+            } });
+    const { default: __VLS_271 } = __VLS_267.slots;
+    // @ts-ignore
+    [];
+    var __VLS_267;
+    var __VLS_268;
+    let __VLS_272;
+    /** @ts-ignore @type {typeof __VLS_components.elButton | typeof __VLS_components.ElButton | typeof __VLS_components.elButton | typeof __VLS_components.ElButton} */
+    elButton;
+    // @ts-ignore
+    const __VLS_273 = __VLS_asFunctionalComponent1(__VLS_272, new __VLS_272({
         ...{ 'onClick': {} },
         type: "info",
         plain: true,
         loading: (__VLS_ctx.linkRegenerating),
         disabled: (!__VLS_ctx.selectedTokens.access_token),
-    }, ...__VLS_functionalComponentArgsRest(__VLS_257));
-    let __VLS_261;
-    const __VLS_262 = ({ click: {} },
+    }));
+    const __VLS_274 = __VLS_273({
+        ...{ 'onClick': {} },
+        type: "info",
+        plain: true,
+        loading: (__VLS_ctx.linkRegenerating),
+        disabled: (!__VLS_ctx.selectedTokens.access_token),
+    }, ...__VLS_functionalComponentArgsRest(__VLS_273));
+    let __VLS_277;
+    const __VLS_278 = ({ click: {} },
         { onClick: (__VLS_ctx.regenerateBindCardLinks) });
-    const { default: __VLS_263 } = __VLS_259.slots;
+    const { default: __VLS_279 } = __VLS_275.slots;
     // @ts-ignore
     [linkRegenerating, selectedTokens, regenerateBindCardLinks,];
-    var __VLS_259;
-    var __VLS_260;
+    var __VLS_275;
+    var __VLS_276;
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
         ...{ class: "detail-grid" },
     });
@@ -1374,112 +1473,24 @@ if (__VLS_ctx.selectedAccount) {
     /** @type {__VLS_StyleScopedClasses['detail-item__label']} */ ;
     __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({});
     (__VLS_ctx.formatDate(__VLS_ctx.selectedAccount.cpa_uploaded_at));
-    let __VLS_264;
+    let __VLS_280;
     /** @ts-ignore @type {typeof __VLS_components.elDivider | typeof __VLS_components.ElDivider | typeof __VLS_components.elDivider | typeof __VLS_components.ElDivider} */
     elDivider;
     // @ts-ignore
-    const __VLS_265 = __VLS_asFunctionalComponent1(__VLS_264, new __VLS_264({
+    const __VLS_281 = __VLS_asFunctionalComponent1(__VLS_280, new __VLS_280({
         contentPosition: "left",
     }));
-    const __VLS_266 = __VLS_265({
+    const __VLS_282 = __VLS_281({
         contentPosition: "left",
-    }, ...__VLS_functionalComponentArgsRest(__VLS_265));
-    const { default: __VLS_269 } = __VLS_267.slots;
+    }, ...__VLS_functionalComponentArgsRest(__VLS_281));
+    const { default: __VLS_285 } = __VLS_283.slots;
     // @ts-ignore
     [formatDate, formatDate, formatDate, formatDate, selectedAccount, selectedAccount, selectedAccount, selectedAccount, selectedAccount, selectedAccount, selectedAccount, selectedAccount,];
-    var __VLS_267;
+    var __VLS_283;
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
         ...{ class: "token-grid" },
     });
     /** @type {__VLS_StyleScopedClasses['token-grid']} */ ;
-    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-        ...{ class: "token-card" },
-    });
-    /** @type {__VLS_StyleScopedClasses['token-card']} */ ;
-    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-        ...{ class: "token-card__header" },
-    });
-    /** @type {__VLS_StyleScopedClasses['token-card__header']} */ ;
-    __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
-        ...{ class: "detail-item__label" },
-    });
-    /** @type {__VLS_StyleScopedClasses['detail-item__label']} */ ;
-    let __VLS_270;
-    /** @ts-ignore @type {typeof __VLS_components.elButton | typeof __VLS_components.ElButton | typeof __VLS_components.elButton | typeof __VLS_components.ElButton} */
-    elButton;
-    // @ts-ignore
-    const __VLS_271 = __VLS_asFunctionalComponent1(__VLS_270, new __VLS_270({
-        ...{ 'onClick': {} },
-        link: true,
-        type: "primary",
-        disabled: (!__VLS_ctx.selectedTokens.access_token),
-    }));
-    const __VLS_272 = __VLS_271({
-        ...{ 'onClick': {} },
-        link: true,
-        type: "primary",
-        disabled: (!__VLS_ctx.selectedTokens.access_token),
-    }, ...__VLS_functionalComponentArgsRest(__VLS_271));
-    let __VLS_275;
-    const __VLS_276 = ({ click: {} },
-        { onClick: (...[$event]) => {
-                if (!(__VLS_ctx.selectedAccount))
-                    return;
-                __VLS_ctx.copyValue(__VLS_ctx.selectedTokens.access_token, 'Access Token');
-                // @ts-ignore
-                [selectedTokens, selectedTokens, copyValue,];
-            } });
-    const { default: __VLS_277 } = __VLS_273.slots;
-    // @ts-ignore
-    [];
-    var __VLS_273;
-    var __VLS_274;
-    __VLS_asFunctionalElement1(__VLS_intrinsics.code, __VLS_intrinsics.code)({});
-    (__VLS_ctx.selectedTokens.access_token_summary || '-');
-    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-        ...{ class: "token-card" },
-    });
-    /** @type {__VLS_StyleScopedClasses['token-card']} */ ;
-    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
-        ...{ class: "token-card__header" },
-    });
-    /** @type {__VLS_StyleScopedClasses['token-card__header']} */ ;
-    __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
-        ...{ class: "detail-item__label" },
-    });
-    /** @type {__VLS_StyleScopedClasses['detail-item__label']} */ ;
-    let __VLS_278;
-    /** @ts-ignore @type {typeof __VLS_components.elButton | typeof __VLS_components.ElButton | typeof __VLS_components.elButton | typeof __VLS_components.ElButton} */
-    elButton;
-    // @ts-ignore
-    const __VLS_279 = __VLS_asFunctionalComponent1(__VLS_278, new __VLS_278({
-        ...{ 'onClick': {} },
-        link: true,
-        type: "primary",
-        disabled: (!__VLS_ctx.selectedTokens.refresh_token),
-    }));
-    const __VLS_280 = __VLS_279({
-        ...{ 'onClick': {} },
-        link: true,
-        type: "primary",
-        disabled: (!__VLS_ctx.selectedTokens.refresh_token),
-    }, ...__VLS_functionalComponentArgsRest(__VLS_279));
-    let __VLS_283;
-    const __VLS_284 = ({ click: {} },
-        { onClick: (...[$event]) => {
-                if (!(__VLS_ctx.selectedAccount))
-                    return;
-                __VLS_ctx.copyValue(__VLS_ctx.selectedTokens.refresh_token, 'Refresh Token');
-                // @ts-ignore
-                [selectedTokens, selectedTokens, selectedTokens, copyValue,];
-            } });
-    const { default: __VLS_285 } = __VLS_281.slots;
-    // @ts-ignore
-    [];
-    var __VLS_281;
-    var __VLS_282;
-    __VLS_asFunctionalElement1(__VLS_intrinsics.code, __VLS_intrinsics.code)({});
-    (__VLS_ctx.selectedTokens.refresh_token_summary || '-');
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
         ...{ class: "token-card" },
     });
@@ -1500,22 +1511,22 @@ if (__VLS_ctx.selectedAccount) {
         ...{ 'onClick': {} },
         link: true,
         type: "primary",
-        disabled: (!__VLS_ctx.selectedTokens.id_token),
+        disabled: (!__VLS_ctx.selectedTokens.access_token),
     }));
     const __VLS_288 = __VLS_287({
         ...{ 'onClick': {} },
         link: true,
         type: "primary",
-        disabled: (!__VLS_ctx.selectedTokens.id_token),
+        disabled: (!__VLS_ctx.selectedTokens.access_token),
     }, ...__VLS_functionalComponentArgsRest(__VLS_287));
     let __VLS_291;
     const __VLS_292 = ({ click: {} },
         { onClick: (...[$event]) => {
                 if (!(__VLS_ctx.selectedAccount))
                     return;
-                __VLS_ctx.copyValue(__VLS_ctx.selectedTokens.id_token, 'ID Token');
+                __VLS_ctx.copyValue(__VLS_ctx.selectedTokens.access_token, 'Access Token');
                 // @ts-ignore
-                [selectedTokens, selectedTokens, selectedTokens, copyValue,];
+                [selectedTokens, selectedTokens, copyValue,];
             } });
     const { default: __VLS_293 } = __VLS_289.slots;
     // @ts-ignore
@@ -1523,7 +1534,7 @@ if (__VLS_ctx.selectedAccount) {
     var __VLS_289;
     var __VLS_290;
     __VLS_asFunctionalElement1(__VLS_intrinsics.code, __VLS_intrinsics.code)({});
-    (__VLS_ctx.selectedTokens.id_token_summary || '-');
+    (__VLS_ctx.selectedTokens.access_token_summary || '-');
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
         ...{ class: "token-card" },
     });
@@ -1544,20 +1555,20 @@ if (__VLS_ctx.selectedAccount) {
         ...{ 'onClick': {} },
         link: true,
         type: "primary",
-        disabled: (!__VLS_ctx.selectedTokens.session_token),
+        disabled: (!__VLS_ctx.selectedTokens.refresh_token),
     }));
     const __VLS_296 = __VLS_295({
         ...{ 'onClick': {} },
         link: true,
         type: "primary",
-        disabled: (!__VLS_ctx.selectedTokens.session_token),
+        disabled: (!__VLS_ctx.selectedTokens.refresh_token),
     }, ...__VLS_functionalComponentArgsRest(__VLS_295));
     let __VLS_299;
     const __VLS_300 = ({ click: {} },
         { onClick: (...[$event]) => {
                 if (!(__VLS_ctx.selectedAccount))
                     return;
-                __VLS_ctx.copyValue(__VLS_ctx.selectedTokens.session_token, 'Session Token');
+                __VLS_ctx.copyValue(__VLS_ctx.selectedTokens.refresh_token, 'Refresh Token');
                 // @ts-ignore
                 [selectedTokens, selectedTokens, selectedTokens, copyValue,];
             } });
@@ -1567,7 +1578,7 @@ if (__VLS_ctx.selectedAccount) {
     var __VLS_297;
     var __VLS_298;
     __VLS_asFunctionalElement1(__VLS_intrinsics.code, __VLS_intrinsics.code)({});
-    (__VLS_ctx.selectedTokens.session_token_summary || '-');
+    (__VLS_ctx.selectedTokens.refresh_token_summary || '-');
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
         ...{ class: "token-card" },
     });
@@ -1588,20 +1599,20 @@ if (__VLS_ctx.selectedAccount) {
         ...{ 'onClick': {} },
         link: true,
         type: "primary",
-        disabled: (!__VLS_ctx.selectedTokens.bind_card_url),
+        disabled: (!__VLS_ctx.selectedTokens.id_token),
     }));
     const __VLS_304 = __VLS_303({
         ...{ 'onClick': {} },
         link: true,
         type: "primary",
-        disabled: (!__VLS_ctx.selectedTokens.bind_card_url),
+        disabled: (!__VLS_ctx.selectedTokens.id_token),
     }, ...__VLS_functionalComponentArgsRest(__VLS_303));
     let __VLS_307;
     const __VLS_308 = ({ click: {} },
         { onClick: (...[$event]) => {
                 if (!(__VLS_ctx.selectedAccount))
                     return;
-                __VLS_ctx.copyValue(__VLS_ctx.selectedTokens.bind_card_url, '绑卡短链');
+                __VLS_ctx.copyValue(__VLS_ctx.selectedTokens.id_token, 'ID Token');
                 // @ts-ignore
                 [selectedTokens, selectedTokens, selectedTokens, copyValue,];
             } });
@@ -1611,7 +1622,7 @@ if (__VLS_ctx.selectedAccount) {
     var __VLS_305;
     var __VLS_306;
     __VLS_asFunctionalElement1(__VLS_intrinsics.code, __VLS_intrinsics.code)({});
-    (__VLS_ctx.selectedTokens.bind_card_url_summary || '-');
+    (__VLS_ctx.selectedTokens.id_token_summary || '-');
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
         ...{ class: "token-card" },
     });
@@ -1632,20 +1643,20 @@ if (__VLS_ctx.selectedAccount) {
         ...{ 'onClick': {} },
         link: true,
         type: "primary",
-        disabled: (!__VLS_ctx.selectedTokens.bind_card_long_url),
+        disabled: (!__VLS_ctx.selectedTokens.session_token),
     }));
     const __VLS_312 = __VLS_311({
         ...{ 'onClick': {} },
         link: true,
         type: "primary",
-        disabled: (!__VLS_ctx.selectedTokens.bind_card_long_url),
+        disabled: (!__VLS_ctx.selectedTokens.session_token),
     }, ...__VLS_functionalComponentArgsRest(__VLS_311));
     let __VLS_315;
     const __VLS_316 = ({ click: {} },
         { onClick: (...[$event]) => {
                 if (!(__VLS_ctx.selectedAccount))
                     return;
-                __VLS_ctx.copyValue(__VLS_ctx.selectedTokens.bind_card_long_url, '绑卡长链');
+                __VLS_ctx.copyValue(__VLS_ctx.selectedTokens.session_token, 'Session Token');
                 // @ts-ignore
                 [selectedTokens, selectedTokens, selectedTokens, copyValue,];
             } });
@@ -1655,11 +1666,99 @@ if (__VLS_ctx.selectedAccount) {
     var __VLS_313;
     var __VLS_314;
     __VLS_asFunctionalElement1(__VLS_intrinsics.code, __VLS_intrinsics.code)({});
+    (__VLS_ctx.selectedTokens.session_token_summary || '-');
+    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+        ...{ class: "token-card" },
+    });
+    /** @type {__VLS_StyleScopedClasses['token-card']} */ ;
+    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+        ...{ class: "token-card__header" },
+    });
+    /** @type {__VLS_StyleScopedClasses['token-card__header']} */ ;
+    __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
+        ...{ class: "detail-item__label" },
+    });
+    /** @type {__VLS_StyleScopedClasses['detail-item__label']} */ ;
+    let __VLS_318;
+    /** @ts-ignore @type {typeof __VLS_components.elButton | typeof __VLS_components.ElButton | typeof __VLS_components.elButton | typeof __VLS_components.ElButton} */
+    elButton;
+    // @ts-ignore
+    const __VLS_319 = __VLS_asFunctionalComponent1(__VLS_318, new __VLS_318({
+        ...{ 'onClick': {} },
+        link: true,
+        type: "primary",
+        disabled: (!__VLS_ctx.selectedTokens.bind_card_url),
+    }));
+    const __VLS_320 = __VLS_319({
+        ...{ 'onClick': {} },
+        link: true,
+        type: "primary",
+        disabled: (!__VLS_ctx.selectedTokens.bind_card_url),
+    }, ...__VLS_functionalComponentArgsRest(__VLS_319));
+    let __VLS_323;
+    const __VLS_324 = ({ click: {} },
+        { onClick: (...[$event]) => {
+                if (!(__VLS_ctx.selectedAccount))
+                    return;
+                __VLS_ctx.copyValue(__VLS_ctx.selectedTokens.bind_card_url, '绑卡短链');
+                // @ts-ignore
+                [selectedTokens, selectedTokens, selectedTokens, copyValue,];
+            } });
+    const { default: __VLS_325 } = __VLS_321.slots;
+    // @ts-ignore
+    [];
+    var __VLS_321;
+    var __VLS_322;
+    __VLS_asFunctionalElement1(__VLS_intrinsics.code, __VLS_intrinsics.code)({});
+    (__VLS_ctx.selectedTokens.bind_card_url_summary || '-');
+    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+        ...{ class: "token-card" },
+    });
+    /** @type {__VLS_StyleScopedClasses['token-card']} */ ;
+    __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
+        ...{ class: "token-card__header" },
+    });
+    /** @type {__VLS_StyleScopedClasses['token-card__header']} */ ;
+    __VLS_asFunctionalElement1(__VLS_intrinsics.span, __VLS_intrinsics.span)({
+        ...{ class: "detail-item__label" },
+    });
+    /** @type {__VLS_StyleScopedClasses['detail-item__label']} */ ;
+    let __VLS_326;
+    /** @ts-ignore @type {typeof __VLS_components.elButton | typeof __VLS_components.ElButton | typeof __VLS_components.elButton | typeof __VLS_components.ElButton} */
+    elButton;
+    // @ts-ignore
+    const __VLS_327 = __VLS_asFunctionalComponent1(__VLS_326, new __VLS_326({
+        ...{ 'onClick': {} },
+        link: true,
+        type: "primary",
+        disabled: (!__VLS_ctx.selectedTokens.bind_card_long_url),
+    }));
+    const __VLS_328 = __VLS_327({
+        ...{ 'onClick': {} },
+        link: true,
+        type: "primary",
+        disabled: (!__VLS_ctx.selectedTokens.bind_card_long_url),
+    }, ...__VLS_functionalComponentArgsRest(__VLS_327));
+    let __VLS_331;
+    const __VLS_332 = ({ click: {} },
+        { onClick: (...[$event]) => {
+                if (!(__VLS_ctx.selectedAccount))
+                    return;
+                __VLS_ctx.copyValue(__VLS_ctx.selectedTokens.bind_card_long_url, '绑卡长链');
+                // @ts-ignore
+                [selectedTokens, selectedTokens, selectedTokens, copyValue,];
+            } });
+    const { default: __VLS_333 } = __VLS_329.slots;
+    // @ts-ignore
+    [];
+    var __VLS_329;
+    var __VLS_330;
+    __VLS_asFunctionalElement1(__VLS_intrinsics.code, __VLS_intrinsics.code)({});
     (__VLS_ctx.selectedTokens.bind_card_long_url_summary || '-');
 }
 // @ts-ignore
 [selectedTokens,];
-var __VLS_223;
+var __VLS_231;
 // @ts-ignore
 [];
 const __VLS_export = (await import('vue')).defineComponent({});

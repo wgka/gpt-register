@@ -44,3 +44,35 @@ func TestDeleteAccount(t *testing.T) {
 		t.Fatalf("expected deleted account tokens to be nil, got %#v", tokens)
 	}
 }
+
+func TestUpdateAccountAllowsClientID(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "accounts.db")
+	sqliteStore, err := NewSQLiteStore(config.Settings{DatabaseURL: dbPath})
+	if err != nil {
+		t.Fatalf("NewSQLiteStore() error = %v", err)
+	}
+
+	accountID, err := sqliteStore.CreateAccount(context.Background(), AccountCreate{
+		Email:        "client-id@example.com",
+		EmailService: "tempmail",
+		AccessToken:  "access-token",
+		ClientID:     "old-client-id",
+	})
+	if err != nil {
+		t.Fatalf("CreateAccount() error = %v", err)
+	}
+
+	if err := sqliteStore.UpdateAccount(context.Background(), accountID, map[string]any{
+		"client_id": "new-client-id",
+	}); err != nil {
+		t.Fatalf("UpdateAccount() error = %v", err)
+	}
+
+	account, err := sqliteStore.GetAccountByID(context.Background(), accountID)
+	if err != nil {
+		t.Fatalf("GetAccountByID() error = %v", err)
+	}
+	if account == nil || account.ClientID == nil || *account.ClientID != "new-client-id" {
+		t.Fatalf("expected updated client_id, got %#v", account)
+	}
+}

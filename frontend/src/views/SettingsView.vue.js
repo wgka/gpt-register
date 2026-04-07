@@ -511,12 +511,12 @@ elInput;
 const __VLS_122 = __VLS_asFunctionalComponent1(__VLS_121, new __VLS_121({
     modelValue: (__VLS_ctx.form.cpa.api_url),
     clearable: true,
-    placeholder: "http://host:port/v0/management/auth-files",
+    placeholder: "http://host:port 或完整 /v0/management/auth-files 地址",
 }));
 const __VLS_123 = __VLS_122({
     modelValue: (__VLS_ctx.form.cpa.api_url),
     clearable: true,
-    placeholder: "http://host:port/v0/management/auth-files",
+    placeholder: "http://host:port 或完整 /v0/management/auth-files 地址",
 }, ...__VLS_functionalComponentArgsRest(__VLS_122));
 // @ts-ignore
 [form,];

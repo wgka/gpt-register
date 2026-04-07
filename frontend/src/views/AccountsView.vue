@@ -158,6 +158,14 @@
               >
                 CPA
               </el-button>
+              <el-button
+                link
+                type="danger"
+                :loading="actionLoading[row.id] === 'reauthorize-codex'"
+                @click="runCodexReauthorize(row)"
+              >
+                Codex授权
+              </el-button>
               <el-button link type="info" @click="openDetail(row.id)">详情</el-button>
             </div>
           </template>
@@ -214,6 +222,14 @@
               @click="runRowAction(selectedAccount, 'upload-cpa', true)"
             >
               上传 CPA
+            </el-button>
+            <el-button
+              type="danger"
+              plain
+              :loading="actionLoading[selectedAccount.id] === 'reauthorize-codex'"
+              @click="runCodexReauthorize(selectedAccount, true)"
+            >
+              Codex/CLI 授权并上报 CPA
             </el-button>
             <el-button
               type="info"
@@ -400,6 +416,7 @@ type AccountTokens = {
 }
 
 type BatchAction = 'refresh' | 'validate' | 'upload-cpa'
+type ActionType = BatchAction | 'reauthorize-codex'
 
 const rows = ref<Account[]>([])
 const total = ref(0)
@@ -411,7 +428,7 @@ const selectedAccount = ref<Account | null>(null)
 const selectedTokens = ref<AccountTokens>({})
 const selectedIds = ref<number[]>([])
 const batchAction = ref<BatchAction | ''>('')
-const actionLoading = reactive<Record<number, '' | BatchAction>>({})
+const actionLoading = reactive<Record<number, '' | ActionType>>({})
 const stats = reactive<AccountStats>({
   total: 0,
   by_status: {},
@@ -585,6 +602,57 @@ async function runRowAction(account: Account, action: BatchAction, reloadDetail 
     }
   } catch {
     ElMessage.error(`${actionSuccessText(action)}失败`)
+  } finally {
+    actionLoading[account.id] = ''
+  }
+}
+
+async function runCodexReauthorize(account: Account, reloadDetail = false) {
+  try {
+    await ElMessageBox.confirm(
+      `将使用保存的密码为 ${account.email} 手动执行 Codex/CLI 授权，并在成功后自动上报 CPA，是否继续？`,
+      'Codex/CLI 授权确认',
+      { type: 'warning' },
+    )
+  } catch {
+    return
+  }
+
+  actionLoading[account.id] = 'reauthorize-codex'
+  try {
+    const response = await fetch(`/api/accounts/${account.id}/reauthorize-codex`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ upload_cpa: true }),
+    })
+    if (!response.ok) {
+      throw new Error('request failed')
+    }
+
+    const payload = (await response.json()) as {
+      success?: boolean
+      auth_updated?: boolean
+      cpa_uploaded?: boolean
+      message?: string
+      error?: string
+    }
+
+    if (payload.success) {
+      ElMessage.success(payload.message || 'Codex/CLI 授权已更新')
+    } else if (payload.auth_updated) {
+      ElMessage.warning(payload.error || 'Codex/CLI 授权已更新，但 CPA 上报失败')
+    } else {
+      ElMessage.error(payload.error || 'Codex/CLI 授权失败')
+    }
+
+    await refreshAll()
+    if (reloadDetail && selectedAccount.value?.id === account.id) {
+      await openDetail(account.id)
+    }
+  } catch {
+    ElMessage.error('Codex/CLI 授权失败')
   } finally {
     actionLoading[account.id] = ''
   }

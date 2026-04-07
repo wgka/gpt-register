@@ -232,31 +232,113 @@ func newRegistrationEngine(settings engineSettings, service EmailService, proxyU
 
 func (e *registrationEngine) run(ctx context.Context) RegistrationResult {
 	result := RegistrationResult{Success: false, Source: "register"}
-	if e.client == nil {
-		result.ErrorMessage = "browser session initialization failed"
+	if err := e.prepareRegistration(ctx, &result); err != nil {
+		result.ErrorMessage = err.Error()
 		return result
+	}
+
+	primaryMode := normalizeAuthMode(e.settings.AuthMode)
+	primaryResult := e.runPrepared(ctx, primaryMode)
+	if primaryResult.Success || primaryMode != authModeCodexCLI || !shouldFallbackFromCodexCLI(primaryResult) {
+		return primaryResult
+	}
+
+	e.logf("Codex/CLI 授权失败，降级到 ChatGPT Web 授权: " + primaryResult.ErrorMessage)
+
+	fallbackSettings := e.settings
+	fallbackSettings.AuthMode = authModeChatGPTWeb
+	fallbackEngine := newRegistrationEngine(fallbackSettings, e.service, e.proxyURL, e.logf)
+	fallbackEngine.email = firstNonEmpty(strings.TrimSpace(primaryResult.Email), strings.TrimSpace(e.email))
+	fallbackEngine.emailInfo = e.emailInfo
+	fallbackEngine.password = firstNonEmpty(strings.TrimSpace(primaryResult.Password), strings.TrimSpace(e.password))
+
+	fallbackPrepared := RegistrationResult{
+		Success:  false,
+		Source:   primaryResult.Source,
+		Email:    fallbackEngine.email,
+		Password: fallbackEngine.password,
+	}
+	if err := fallbackEngine.prepareRegistration(ctx, &fallbackPrepared); err != nil {
+		fallbackPrepared.ErrorMessage = fmt.Sprintf("codex/cli auth failed: %s; chatgpt_web fallback init failed: %s", primaryResult.ErrorMessage, err.Error())
+		return fallbackPrepared
+	}
+
+	fallbackResult := fallbackEngine.runPrepared(ctx, authModeChatGPTWeb)
+	if !fallbackResult.Success {
+		fallbackResult.ErrorMessage = fmt.Sprintf("codex/cli auth failed: %s; chatgpt_web fallback failed: %s", primaryResult.ErrorMessage, fallbackResult.ErrorMessage)
+		return fallbackResult
+	}
+	if fallbackResult.Metadata == nil {
+		fallbackResult.Metadata = map[string]any{}
+	}
+	fallbackResult.Metadata["auth_fallback_used"] = true
+	fallbackResult.Metadata["auth_fallback_from"] = primaryMode
+	fallbackResult.Metadata["auth_fallback_reason"] = primaryResult.ErrorMessage
+	return fallbackResult
+}
+
+func (e *registrationEngine) prepareRegistration(ctx context.Context, result *RegistrationResult) error {
+	if result == nil {
+		return fmt.Errorf("registration result is required")
+	}
+	if e.client == nil {
+		return fmt.Errorf("browser session initialization failed")
 	}
 
 	e.logf("检查代理出口地区")
 	if ok, location := e.checkIPLocation(ctx); !ok {
-		result.ErrorMessage = location
-		return result
+		return fmt.Errorf("%s", location)
 	} else if strings.TrimSpace(location) != "" {
 		e.logf("代理地区: " + location)
 	}
 
-	e.logf("创建邮箱")
-	emailInfo, err := e.service.CreateEmail(ctx)
-	if err != nil {
-		result.ErrorMessage = err.Error()
-		return result
+	if strings.TrimSpace(e.email) == "" {
+		if e.service == nil {
+			return fmt.Errorf("email service is unavailable")
+		}
+		e.logf("创建邮箱")
+		emailInfo, err := e.service.CreateEmail(ctx)
+		if err != nil {
+			return err
+		}
+		e.emailInfo = emailInfo
+		e.email = emailInfo.Email
+		e.logf("邮箱已创建: " + e.email)
+	} else {
+		if strings.TrimSpace(e.emailInfo.Email) == "" || strings.TrimSpace(e.emailInfo.ServiceID) == "" {
+			e.emailInfo = EmailInfo{
+				Email:     e.email,
+				ServiceID: firstNonEmpty(strings.TrimSpace(e.emailInfo.ServiceID), strings.TrimSpace(e.email)),
+			}
+		}
+		e.logf("使用已有邮箱继续授权: " + e.email)
 	}
-	e.emailInfo = emailInfo
-	e.email = emailInfo.Email
-	result.Email = e.email
-	e.logf("邮箱已创建: " + e.email)
 
-	e.logf("授权模式: " + normalizeAuthMode(e.settings.AuthMode))
+	result.Email = e.email
+	if strings.TrimSpace(e.password) != "" {
+		result.Password = e.password
+	}
+	return nil
+}
+
+func (e *registrationEngine) runPrepared(ctx context.Context, mode string) RegistrationResult {
+	mode = normalizeAuthMode(mode)
+	e.settings.AuthMode = mode
+	e.isExisting = false
+	e.cachedWorkspaceID = ""
+	e.authSessionID = ""
+	e.authorizeURL = ""
+	e.oauthState = ""
+	e.oauthStart = oauthStart{}
+
+	result := RegistrationResult{
+		Success:  false,
+		Source:   "register",
+		Email:    e.email,
+		Password: e.password,
+	}
+
+	e.logf("授权模式: " + mode)
 	if e.usesCodexCLIOAuth() {
 		e.oauthStart = startOAuth(e.settings)
 		e.oauthState = e.oauthStart.State
@@ -500,6 +582,17 @@ func (e *registrationEngine) run(ctx context.Context) RegistrationResult {
 	e.logf("注册流程完成")
 
 	return result
+}
+
+func shouldFallbackFromCodexCLI(result RegistrationResult) bool {
+	if strings.TrimSpace(result.ErrorMessage) == "" {
+		return false
+	}
+	if shouldRetryPhoneVerification(result, 1, 1) {
+		return false
+	}
+	message := strings.ToLower(strings.TrimSpace(result.ErrorMessage))
+	return !strings.Contains(message, "unsupported ip location")
 }
 
 func (e *registrationEngine) checkIPLocation(ctx context.Context) (bool, string) {
@@ -784,7 +877,10 @@ func (e *registrationEngine) submitSignup(ctx context.Context, sentinelToken str
 }
 
 func (e *registrationEngine) registerPassword(ctx context.Context) (string, string, error) {
-	password := randomPassword(e.settings.DefaultPasswordLength)
+	password := strings.TrimSpace(e.password)
+	if password == "" {
+		password = randomPassword(e.settings.DefaultPasswordLength)
+	}
 	payload := map[string]string{"password": password, "username": e.email}
 	body, _ := json.Marshal(payload)
 	sentinelToken, err := e.getSentinelToken(ctx, "oauth_create_account")
@@ -2247,9 +2343,9 @@ func (e *registrationEngine) buildChatGPTWebOAuthURL() string {
 
 func (e *registrationEngine) buildAuthorizationFallbackURL() (string, string) {
 	if e.usesCodexCLIOAuth() {
-		return e.buildConsentOAuthURL(), "Codex/CLI OAuth"
+		return e.buildChatGPTWebOAuthURL(), "ChatGPT oauth2/auth"
 	}
-	return e.buildChatGPTWebOAuthURL(), "ChatGPT oauth2/auth"
+	return e.buildConsentOAuthURL(), "Codex/CLI OAuth"
 }
 
 func (e *registrationEngine) visitChatGPTWebCallback(ctx context.Context, callbackURL string) error {

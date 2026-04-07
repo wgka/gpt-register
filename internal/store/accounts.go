@@ -446,7 +446,7 @@ func (s *SQLiteStore) UpdateAccount(ctx context.Context, accountID int, updates 
 	for key, value := range updates {
 		switch key {
 		case "status", "access_token", "refresh_token", "id_token", "session_token", "last_refresh",
-			"expires_at", "account_id", "workspace_id", "proxy_used", "source":
+			"expires_at", "account_id", "workspace_id", "proxy_used", "source", "client_id":
 			assignments = append(assignments, key+" = ?")
 			args = append(args, value)
 		case "cpa_uploaded":

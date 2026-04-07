@@ -45,6 +45,8 @@ func (a *apiServer) handleAccountRoute(w http.ResponseWriter, req *http.Request)
 		a.handleAccountRefresh(w, req, accountID)
 	case "validate":
 		a.handleAccountValidate(w, req, accountID)
+	case "reauthorize-codex":
+		a.handleAccountReauthorizeCodex(w, req, accountID)
 	case "upload-cpa":
 		a.handleAccountCPAUpload(w, req, accountID)
 	default:
@@ -197,6 +199,30 @@ func (a *apiServer) handleAccountValidate(w http.ResponseWriter, req *http.Reque
 		"valid":   result.Valid,
 		"error":   result.ErrorMessage,
 		"deleted": result.Deleted,
+	})
+}
+
+func (a *apiServer) handleAccountReauthorizeCodex(w http.ResponseWriter, req *http.Request, accountID int) {
+	if req.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		return
+	}
+
+	var payload struct {
+		Proxy     string `json:"proxy"`
+		UploadCPA bool   `json:"upload_cpa"`
+	}
+	if req.Body != nil {
+		_ = json.NewDecoder(req.Body).Decode(&payload)
+	}
+
+	result := runtime.ReauthorizeAccountWithCodexCLI(req.Context(), a.store, accountID, runtime.ResolveProxy(payload.Proxy), payload.UploadCPA)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"success":      result.Success,
+		"auth_updated": result.AuthUpdated,
+		"cpa_uploaded": result.CPAUploaded,
+		"message":      result.Message,
+		"error":        result.ErrorMessage,
 	})
 }
 

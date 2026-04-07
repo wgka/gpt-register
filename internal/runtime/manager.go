@@ -431,7 +431,9 @@ func (m *TaskManager) runTask(ctx context.Context, batchID, taskUUID string, req
 	} else {
 		logf(fmt.Sprintf("账号已入库: %s (ID %d)", result.Email, accountID))
 		cpaConfig := ResolveCPAConfig(context.Background(), m.db)
-		if cpaConfig.Enabled {
+		if allow, reason := shouldAutoUploadCPAForRegistration(result); !allow {
+			logf("当前注册结果仅保注册流程通畅，跳过自动上传 CPA: " + reason)
+		} else if cpaConfig.Enabled {
 			logf("开始自动上传 CPA")
 			success, message := UploadAccountToCPA(context.Background(), m.db, accountID, cpaConfig.APIURL, cpaConfig.APIToken, cpaConfig.ProxyURL)
 			if success {
@@ -595,6 +597,22 @@ func buildRegistrationResultEvent(taskUUID string, accountDBID int, result Regis
 		extra["bind_card_url_summary"] = summarizeValue(result.BindCardURL, 88)
 	}
 	return extra
+}
+
+func shouldAutoUploadCPAForRegistration(result RegistrationResult) (bool, string) {
+	authMode := normalizeAuthMode(asString(result.Metadata["auth_mode"]))
+	if authMode != authModeCodexCLI {
+		return false, "当前为 Web 授权结果"
+	}
+	if authFallbackUsed(result.Metadata["auth_fallback_used"]) {
+		return false, "Codex/CLI 失败后已降级到 Web"
+	}
+	return true, ""
+}
+
+func authFallbackUsed(value any) bool {
+	v, ok := value.(bool)
+	return ok && v
 }
 
 func summarizeValue(value string, keep int) string {

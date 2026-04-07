@@ -55,6 +55,14 @@
             :value="option.value"
           />
         </el-select>
+        <el-select v-model="filters.refreshTokenStatus" clearable placeholder="Refresh Token">
+          <el-option
+            v-for="option in refreshTokenOptions"
+            :key="option.value"
+            :label="option.label"
+            :value="option.value"
+          />
+        </el-select>
         <el-button type="primary" @click="applyFilters">查询</el-button>
         <el-button @click="resetFilters">重置</el-button>
       </div>
@@ -439,6 +447,7 @@ const filters = reactive({
   search: '',
   status: '',
   emailService: '',
+  refreshTokenStatus: '',
   page: 1,
   pageSize: 10,
 })
@@ -451,6 +460,10 @@ const statusOptions = [
 ]
 
 const serviceOptions = [{ label: '临时邮箱', value: 'tempmail' }]
+const refreshTokenOptions = [
+  { label: '有 Refresh Token', value: 'has' },
+  { label: '无 Refresh Token', value: 'none' },
+]
 
 async function refreshAll() {
   loading.value = true
@@ -477,6 +490,9 @@ async function loadAccounts() {
   }
   if (filters.emailService) {
     params.set('email_service', filters.emailService)
+  }
+  if (filters.refreshTokenStatus) {
+    params.set('refresh_token_status', filters.refreshTokenStatus)
   }
 
   const response = await fetch(`/api/accounts?${params.toString()}`)
@@ -737,6 +753,7 @@ function resetFilters() {
   filters.search = ''
   filters.status = ''
   filters.emailService = ''
+  filters.refreshTokenStatus = ''
   filters.page = 1
   refreshAll()
 }
@@ -875,7 +892,7 @@ onMounted(() => {
 
 .filters {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) repeat(2, minmax(180px, 1fr)) auto auto;
+  grid-template-columns: minmax(0, 2fr) repeat(3, minmax(180px, 1fr)) auto auto;
   gap: 12px;
   margin-bottom: 16px;
 }

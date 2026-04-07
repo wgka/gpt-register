@@ -176,11 +176,12 @@ func (a *apiServer) handleAccounts(w http.ResponseWriter, req *http.Request) {
 	}
 
 	params := store.AccountListParams{
-		Page:         parsePositiveInt(req.URL.Query().Get("page"), 1, 1, 100000),
-		PageSize:     parsePositiveInt(req.URL.Query().Get("page_size"), 20, 1, 100),
-		Status:       req.URL.Query().Get("status"),
-		EmailService: req.URL.Query().Get("email_service"),
-		Search:       req.URL.Query().Get("search"),
+		Page:               parsePositiveInt(req.URL.Query().Get("page"), 1, 1, 100000),
+		PageSize:           parsePositiveInt(req.URL.Query().Get("page_size"), 20, 1, 100),
+		Status:             req.URL.Query().Get("status"),
+		EmailService:       req.URL.Query().Get("email_service"),
+		Search:             req.URL.Query().Get("search"),
+		RefreshTokenStatus: req.URL.Query().Get("refresh_token_status"),
 	}
 
 	result, err := a.store.ListAccounts(req.Context(), params)

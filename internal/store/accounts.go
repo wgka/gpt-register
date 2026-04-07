@@ -69,11 +69,12 @@ type AccountCreate struct {
 }
 
 type AccountListParams struct {
-	Page         int
-	PageSize     int
-	Status       string
-	EmailService string
-	Search       string
+	Page               int
+	PageSize           int
+	Status             string
+	EmailService       string
+	Search             string
+	RefreshTokenStatus string
 }
 
 type AccountListResult struct {
@@ -518,6 +519,13 @@ func buildAccountFilter(params AccountListParams) (string, []any) {
 			"AND (email LIKE ? COLLATE NOCASE OR account_id LIKE ? COLLATE NOCASE OR workspace_id LIKE ? COLLATE NOCASE)",
 		)
 		args = append(args, pattern, pattern, pattern)
+	}
+
+	switch strings.ToLower(strings.TrimSpace(params.RefreshTokenStatus)) {
+	case "has", "yes", "with":
+		clauses = append(clauses, "AND COALESCE(TRIM(refresh_token), '') <> ''")
+	case "none", "no", "without":
+		clauses = append(clauses, "AND COALESCE(TRIM(refresh_token), '') = ''")
 	}
 
 	return strings.Join(clauses, " "), args

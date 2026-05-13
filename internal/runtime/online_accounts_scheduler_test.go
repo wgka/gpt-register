@@ -150,8 +150,8 @@ func TestIsTokenInvalidManagementFile(t *testing.T) {
 			invalid: true,
 		},
 		{
-			name:    "plain_401_token_expired_message",
-			raw:     `401 Provided authentication token is expired. Please try signing in again.`,
+			name:    "chinese_prefix_token_expired",
+			raw:     `额度获取失败：401 Provided authentication token is expired. Please try signing in again.`,
 			invalid: true,
 		},
 		{

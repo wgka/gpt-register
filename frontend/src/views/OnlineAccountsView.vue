@@ -44,7 +44,7 @@
             type="info"
             show-icon
             :closable="false"
-            title="定时任务会复用设置页里的 CPA API URL 和 Token，仅处理 token_invalidated / deactivated_workspace 账号。"
+            title="定时任务会复用设置页里的 CPA API URL 和 Token；失效判定与「Token 失效」列表一致（含 token_expired、账号停用、过期英文提示等）。"
           />
 
           <div class="scheduler-switches">
@@ -579,8 +579,35 @@ const deletingId = ref<string | null>(null)
 const cleaningInvalid = ref(false)
 const searchText = ref('')
 const filterStatus = ref('')
-const tokenInvalidCodes = new Set(['token_invalidated', 'deactivated_workspace'])
+/** Substrings matched case-insensitively; keep in sync with internal/runtime onlineAccountsTokenInvalidMarkers */
+const tokenInvalidMarkers = [
+  'token_invalidated',
+  'deactivated_workspace',
+  'token_expired',
+  'authentication token is expired',
+  'account has been deactivated',
+  'account_deactivated',
+] as const
 
+function statusMessageHaystack(raw: AuthFile['status_message']): string {
+  if (raw === undefined || raw === null) return ''
+  if (typeof raw === 'string') return raw
+  try {
+    return JSON.stringify(raw)
+  } catch {
+    return String(raw)
+  }
+}
+
+function isTokenInvalid(file: AuthFile): boolean {
+  const lower = statusMessageHaystack(file.status_message).toLowerCase()
+  return tokenInvalidMarkers.some((m) => lower.includes(m))
+}
+
+function containsTokenInvalidCode(raw: string | undefined): boolean {
+  if (!raw) return false
+  return tokenInvalidMarkers.some((m) => raw.toLowerCase().includes(m))
+}
 const schedulerLoading = ref(false)
 const schedulerSaving = ref(false)
 const schedulerRunning = ref(false)
@@ -623,20 +650,6 @@ function applySchedulerState(state: SchedulerState, syncForm = false) {
   if (syncForm) {
     syncSchedulerForm(mergedConfig)
   }
-}
-
-function isTokenInvalid(file: AuthFile): boolean {
-  if (containsTokenInvalidCode(file.status_message)) {
-    return true
-  }
-  const payload = parseStatusMessage(file)
-  if (!payload) return false
-  return tokenInvalidCodes.has(payload.error?.code || payload.detail?.code || '')
-}
-
-function containsTokenInvalidCode(raw: string | undefined): boolean {
-  if (!raw) return false
-  return Array.from(tokenInvalidCodes).some((code) => raw.includes(code))
 }
 
 function parseStatusMessage(file: AuthFile): StatusMessagePayload | null {

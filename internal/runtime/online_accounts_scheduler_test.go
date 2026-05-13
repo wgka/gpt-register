@@ -138,6 +138,31 @@ func jsonResponse(status int, body []byte) *http.Response {
 	}
 }
 
+func TestIsTokenInvalidManagementFile(t *testing.T) {
+	tests := []struct {
+		name    string
+		raw     string
+		invalid bool
+	}{
+		{
+			name:    "token_expired_401_shape",
+			raw:     `{"error":{"message":"Provided authentication token is expired. Please try signing in again.","type":null,"code":"token_expired","param":null},"status":401}`,
+			invalid: true,
+		},
+		{"token_invalidated", `{"error":{"code":"token_invalidated"}}`, true},
+		{"deactivated_workspace", `{"detail":{"code":"deactivated_workspace"}}`, true},
+		{"ok", `{"error":{"code":"ok"}}`, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := managementAuthFile{StatusMessage: json.RawMessage(tt.raw)}
+			if got := isTokenInvalidManagementFile(f); got != tt.invalid {
+				t.Fatalf("isTokenInvalidManagementFile() = %v, want %v", got, tt.invalid)
+			}
+		})
+	}
+}
+
 func TestNormalizeOnlineAccountsManagementEndpoint(t *testing.T) {
 	tests := []struct {
 		name string

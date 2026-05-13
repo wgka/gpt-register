@@ -38,3 +38,6 @@ backups/
 /out/
 .cursor/
 .gocache/
+# Cursor subagent context sync
+.cursor-subagent-contexts/
+.cursor-subagent-contexts

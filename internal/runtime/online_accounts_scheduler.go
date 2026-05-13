@@ -36,6 +36,7 @@ const (
 var onlineAccountsTokenInvalidMarkers = []string{
 	"token_invalidated",
 	"deactivated_workspace",
+	"token_expired", // e.g. {"error":{"code":"token_expired","message":"..."},"status":401}
 }
 
 var onlineAccountsHTTPClientFactory = func(proxyURL string, timeout time.Duration) *http.Client {

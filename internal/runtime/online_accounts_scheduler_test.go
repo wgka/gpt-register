@@ -150,8 +150,18 @@ func TestIsTokenInvalidManagementFile(t *testing.T) {
 			invalid: true,
 		},
 		{
+			name:    "plain_401_token_expired_message",
+			raw:     `401 Provided authentication token is expired. Please try signing in again.`,
+			invalid: true,
+		},
+		{
 			name:    "openai_account_deactivated_plain",
 			raw:     `401 Your OpenAI account has been deactivated, please check your email for more information.`,
+			invalid: true,
+		},
+		{
+			name:    "openai_account_deactivated_with_help_link",
+			raw:     `401 Your OpenAI account has been deactivated, please check your email for more information. If you feel this is an error, contact us through our help center at help.openai.com.`,
 			invalid: true,
 		},
 		{"account_deactivated_code", `{"error":{"code":"account_deactivated"}}`, true},

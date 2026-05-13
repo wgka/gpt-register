@@ -36,7 +36,8 @@ const (
 var onlineAccountsTokenInvalidMarkers = []string{
 	"token_invalidated",
 	"deactivated_workspace",
-	"token_expired", // e.g. {"error":{"code":"token_expired","message":"..."},"status":401}
+	"token_expired",                   // e.g. {"error":{"code":"token_expired","message":"..."},"status":401}
+	"authentication token is expired", // plain text e.g. "401 Provided authentication token is expired..."
 	"account has been deactivated",
 	"account_deactivated",
 }

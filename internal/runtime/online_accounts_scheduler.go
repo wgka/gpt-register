@@ -642,7 +642,7 @@ func loadOnlineAccountsManagementConfig() (onlineAccountsManagementConfig, error
 	token := firstEnv("APP_CPA_API_TOKEN", "CPA_API_TOKEN", "VITE_CPA_API_TOKEN")
 	proxyURL := firstEnv("APP_CPA_PROXY_URL", "CPA_PROXY_URL")
 
-	endpoint := normalizeOnlineAccountsManagementEndpoint(rawURL)
+	endpoint := NormalizeCPAManagementEndpoint(rawURL)
 	if endpoint == "" {
 		return onlineAccountsManagementConfig{}, errors.New("CPA API URL 未配置，无法执行线上账号定时任务")
 	}
@@ -655,28 +655,6 @@ func loadOnlineAccountsManagementConfig() (onlineAccountsManagementConfig, error
 		Token:    strings.TrimSpace(token),
 		ProxyURL: strings.TrimSpace(proxyURL),
 	}, nil
-}
-
-func normalizeOnlineAccountsManagementEndpoint(raw string) string {
-	trimmed := strings.TrimSpace(raw)
-	if trimmed == "" {
-		return ""
-	}
-
-	parsed, err := url.Parse(trimmed)
-	if err != nil || strings.TrimSpace(parsed.Scheme) == "" || strings.TrimSpace(parsed.Host) == "" {
-		return ""
-	}
-
-	pathname := strings.TrimRight(parsed.EscapedPath(), "/")
-	if pathname == "" {
-		return parsed.Scheme + "://" + parsed.Host + "/v0/management/auth-files"
-	}
-
-	if parsed.RawQuery != "" {
-		return parsed.Scheme + "://" + parsed.Host + pathname + "?" + parsed.RawQuery
-	}
-	return parsed.Scheme + "://" + parsed.Host + pathname
 }
 
 func fetchManagementAuthFiles(ctx context.Context, cfg onlineAccountsManagementConfig) ([]managementAuthFile, error) {

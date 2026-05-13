@@ -136,6 +136,8 @@ func apiRoutes(cfg config.Settings, api *apiServer) http.Handler {
 	})
 
 	mux.HandleFunc("/api/settings", api.handleSettings)
+	mux.HandleFunc("/api/online-accounts/management/auth-files/status", api.handleCPAManagementAuthFilesStatus)
+	mux.HandleFunc("/api/online-accounts/management/auth-files", api.handleCPAManagementAuthFiles)
 	mux.HandleFunc("/api/online-accounts/scheduler/run", api.handleOnlineAccountsSchedulerRun)
 	mux.HandleFunc("/api/online-accounts/scheduler/logs", api.handleOnlineAccountsSchedulerLogs)
 	mux.HandleFunc("/api/online-accounts/scheduler", api.handleOnlineAccountsScheduler)

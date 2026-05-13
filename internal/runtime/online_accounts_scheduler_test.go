@@ -179,7 +179,7 @@ func TestIsTokenInvalidManagementFile(t *testing.T) {
 	}
 }
 
-func TestNormalizeOnlineAccountsManagementEndpoint(t *testing.T) {
+func TestNormalizeCPAManagementEndpoint(t *testing.T) {
 	tests := []struct {
 		name string
 		in   string
@@ -204,8 +204,8 @@ func TestNormalizeOnlineAccountsManagementEndpoint(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := normalizeOnlineAccountsManagementEndpoint(tt.in); got != tt.want {
-				t.Fatalf("normalizeOnlineAccountsManagementEndpoint(%q) = %q, want %q", tt.in, got, tt.want)
+			if got := NormalizeCPAManagementEndpoint(tt.in); got != tt.want {
+				t.Fatalf("NormalizeCPAManagementEndpoint(%q) = %q, want %q", tt.in, got, tt.want)
 			}
 		})
 	}

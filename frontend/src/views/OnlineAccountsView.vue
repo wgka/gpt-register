@@ -864,17 +864,16 @@ function shouldAutoEnableAfterLimit(file: AuthFile): boolean {
 }
 
 async function updateFileDisabledStatus(file: AuthFile, disabled: boolean) {
-  const response = await fetch(`${managementEndpoint.value}/status`, {
-    method: 'PATCH',
-    headers: {
-      Authorization: `Bearer ${managementToken.value}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      name: file.name,
-      disabled,
-    }),
-  })
+    const response = await fetch('/api/online-accounts/management/auth-files/status', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: file.name,
+        disabled,
+      }),
+    })
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`)
   }
@@ -912,9 +911,7 @@ async function loadFiles(syncUsageLimit = true) {
   try {
     await ensureManagementConfig()
 
-    const response = await fetch(managementEndpoint.value, {
-      headers: { Authorization: `Bearer ${managementToken.value}` },
-    })
+    const response = await fetch('/api/online-accounts/management/auth-files')
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`)
     }
@@ -1087,10 +1084,10 @@ async function deleteFile(file: AuthFile) {
   try {
     await ensureManagementConfig()
 
-    const response = await fetch(`${managementEndpoint.value}?name=${encodeURIComponent(file.name)}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${managementToken.value}` },
-    })
+    const response = await fetch(
+      `/api/online-accounts/management/auth-files?name=${encodeURIComponent(file.name)}`,
+      { method: 'DELETE' },
+    )
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`)
     }
@@ -1125,10 +1122,10 @@ async function cleanAllInvalid() {
 
     for (const file of targets) {
       try {
-        const response = await fetch(`${managementEndpoint.value}?name=${encodeURIComponent(file.name)}`, {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${managementToken.value}` },
-        })
+        const response = await fetch(
+          `/api/online-accounts/management/auth-files?name=${encodeURIComponent(file.name)}`,
+          { method: 'DELETE' },
+        )
         if (response.ok) {
           successCount++
         } else {

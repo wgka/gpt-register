@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -223,6 +224,70 @@ func normalizeCPAUploadEndpoint(raw string) string {
 		result += "?" + parsed.RawQuery
 	}
 	return result
+}
+
+// NormalizeCPAManagementEndpoint returns the list/delete base URL for CPA management auth-files API.
+func NormalizeCPAManagementEndpoint(raw string) string {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return ""
+	}
+
+	parsed, err := url.Parse(trimmed)
+	if err != nil || strings.TrimSpace(parsed.Scheme) == "" || strings.TrimSpace(parsed.Host) == "" {
+		return ""
+	}
+
+	pathname := strings.TrimRight(parsed.EscapedPath(), "/")
+	if pathname == "" {
+		return parsed.Scheme + "://" + parsed.Host + "/v0/management/auth-files"
+	}
+
+	if parsed.RawQuery != "" {
+		return parsed.Scheme + "://" + parsed.Host + pathname + "?" + parsed.RawQuery
+	}
+	return parsed.Scheme + "://" + parsed.Host + pathname
+}
+
+// ForwardCPAManagementRequest calls the CPA management HTTP API. pathSuffix is "/status" for PATCH disabled state.
+func ForwardCPAManagementRequest(ctx context.Context, cfg CPAConfig, method, pathSuffix, rawQuery string, body []byte, contentType string) ([]byte, int, error) {
+	base := NormalizeCPAManagementEndpoint(cfg.APIURL)
+	if base == "" {
+		return nil, 0, fmt.Errorf("CPA API URL 无效")
+	}
+	token := strings.TrimSpace(cfg.APIToken)
+	if token == "" {
+		return nil, 0, fmt.Errorf("CPA API Token 未配置")
+	}
+	target := base + pathSuffix
+	if rawQuery != "" {
+		if strings.Contains(target, "?") {
+			target += "&" + rawQuery
+		} else {
+			target += "?" + rawQuery
+		}
+	}
+	var rdr io.Reader
+	if len(body) > 0 {
+		rdr = bytes.NewReader(body)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, target, rdr)
+	if err != nil {
+		return nil, 0, err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("User-Agent", userAgent())
+	if contentType != "" && len(body) > 0 {
+		req.Header.Set("Content-Type", contentType)
+	}
+	client := newHTTPClient(strings.TrimSpace(cfg.ProxyURL), 120*time.Second, true)
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer resp.Body.Close()
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
+	return respBody, resp.StatusCode, err
 }
 
 func formatCPAOptionalTime(raw string) string {

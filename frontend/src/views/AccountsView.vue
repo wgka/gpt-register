@@ -98,11 +98,10 @@
         <el-button
           type="danger"
           plain
-          :disabled="selectedIds.length === 0"
           :loading="batchAction === 'check-ban'"
-          @click="runBatchAction('check-ban')"
+          @click="runCheckBanAll"
         >
-          检测封号
+          全量检测封号
         </el-button>
         <span class="batch-actions__hint">
           已选 {{ selectedIds.length }} 项
@@ -717,6 +716,45 @@ async function runBatchAction(action: BatchAction) {
     await refreshAll()
   } catch {
     ElMessage.error(`${actionConfirmText(action)}失败`)
+  } finally {
+    batchAction.value = ''
+  }
+}
+
+async function runCheckBanAll() {
+  try {
+    await ElMessageBox.confirm(
+      '将对所有账号进行封号检测，封禁/失效账号将被直接删除，是否继续？',
+      '全量检测封号',
+      { type: 'warning' },
+    )
+  } catch {
+    return
+  }
+
+  batchAction.value = 'check-ban'
+  try {
+    const response = await fetch('/api/accounts/validate-all', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    })
+    if (!response.ok) {
+      throw new Error('request failed')
+    }
+
+    const payload = (await response.json()) as Record<string, unknown>
+    const deleted = Number(payload.deleted_count ?? 0)
+    const invalid = Number(payload.invalid_count ?? 0)
+    const valid = Number(payload.valid_count ?? 0)
+    const total = Number(payload.total ?? 0)
+    const msg = deleted > 0
+      ? `检测完成（共 ${total} 个），正常 ${valid}，封禁/失效 ${invalid}，已删除 ${deleted} 个`
+      : `检测完成（共 ${total} 个），全部正常，无封禁`
+    ElMessage.success(msg)
+    await refreshAll()
+  } catch {
+    ElMessage.error('全量检测封号失败')
   } finally {
     batchAction.value = ''
   }

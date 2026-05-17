@@ -198,6 +198,30 @@ LIMIT ? OFFSET ?`
 	return result, nil
 }
 
+func (s *SQLiteStore) AllAccountIDs(ctx context.Context) ([]int, error) {
+	if !s.Available() {
+		return nil, nil
+	}
+	exists, err := s.tableExists(ctx, "accounts")
+	if err != nil || !exists {
+		return nil, err
+	}
+	rows, err := s.db.QueryContext(ctx, "SELECT id FROM accounts ORDER BY id")
+	if err != nil {
+		return nil, fmt.Errorf("query account ids: %w", err)
+	}
+	defer rows.Close()
+	var ids []int
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
 func (s *SQLiteStore) GetAccountByID(ctx context.Context, accountID int) (*Account, error) {
 	if !s.Available() {
 		return nil, nil

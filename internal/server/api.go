@@ -145,6 +145,7 @@ func apiRoutes(cfg config.Settings, api *apiServer) http.Handler {
 	mux.HandleFunc("/api/accounts/stats/summary", api.handleAccountStats)
 	mux.HandleFunc("/api/accounts/batch-refresh", api.handleBatchRefresh)
 	mux.HandleFunc("/api/accounts/batch-validate", api.handleBatchValidate)
+	mux.HandleFunc("/api/accounts/validate-all", api.handleValidateAll)
 	mux.HandleFunc("/api/accounts/batch-upload-cpa", api.handleBatchCPAUpload)
 	mux.HandleFunc("/api/accounts/", api.handleAccountRoute)
 	mux.HandleFunc("/api/accounts", api.handleAccounts)

@@ -271,6 +271,48 @@ func (a *apiServer) handleBatchValidate(w http.ResponseWriter, req *http.Request
 	})
 }
 
+func (a *apiServer) handleValidateAll(w http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "method not allowed"})
+		return
+	}
+
+	var payload struct {
+		Proxy string `json:"proxy"`
+	}
+	if req.Body != nil {
+		_ = json.NewDecoder(req.Body).Decode(&payload)
+	}
+
+	ids, err := a.store.AllAccountIDs(req.Context())
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+
+	validCount := 0
+	invalidCount := 0
+	deletedCount := 0
+	for _, accountID := range ids {
+		result := a.validateAndDeleteInvalidAccount(req.Context(), accountID, runtime.ResolveProxy(payload.Proxy))
+		if result.Valid {
+			validCount++
+		} else {
+			invalidCount++
+			if result.Deleted {
+				deletedCount++
+			}
+		}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"total":         len(ids),
+		"valid_count":   validCount,
+		"invalid_count": invalidCount,
+		"deleted_count": deletedCount,
+	})
+}
+
 func (a *apiServer) validateAndDeleteInvalidAccount(ctx context.Context, accountID int, proxyURL string) runtime.TokenValidationResult {
 	result := runtime.ValidateAccountToken(ctx, a.store, accountID, proxyURL)
 	if result.Valid || !result.ShouldDelete {

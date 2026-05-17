@@ -95,6 +95,15 @@
         >
           上传 CPA
         </el-button>
+        <el-button
+          type="danger"
+          plain
+          :disabled="selectedIds.length === 0"
+          :loading="batchAction === 'check-ban'"
+          @click="runBatchAction('check-ban')"
+        >
+          检测封号
+        </el-button>
         <span class="batch-actions__hint">
           已选 {{ selectedIds.length }} 项
         </span>
@@ -423,7 +432,7 @@ type AccountTokens = {
   has_tokens?: boolean
 }
 
-type BatchAction = 'refresh' | 'validate' | 'upload-cpa'
+type BatchAction = 'refresh' | 'validate' | 'upload-cpa' | 'check-ban'
 type ActionType = BatchAction | 'reauthorize-codex'
 
 const rows = ref<Account[]>([])
@@ -691,7 +700,8 @@ async function runBatchAction(action: BatchAction) {
 
   batchAction.value = action
   try {
-    const response = await fetch(`/api/accounts/batch-${action}`, {
+    const endpoint = action === 'check-ban' ? 'batch-validate' : `batch-${action}`
+    const response = await fetch(`/api/accounts/${endpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -822,6 +832,8 @@ function actionSuccessText(action: BatchAction) {
       return '校验 Token'
     case 'upload-cpa':
       return '上传 CPA'
+    case 'check-ban':
+      return '检测封号'
   }
 }
 
@@ -833,6 +845,8 @@ function actionConfirmText(action: BatchAction) {
       return '校验 Token'
     case 'upload-cpa':
       return '上传到 CPA'
+    case 'check-ban':
+      return '检测封号（封禁/失效账号将被删除）'
   }
 }
 
@@ -842,6 +856,14 @@ function buildBatchMessage(action: BatchAction, payload: Record<string, unknown>
   }
   if (action === 'validate') {
     return `校验完成，有效 ${Number(payload.valid_count ?? 0)}，无效 ${Number(payload.invalid_count ?? 0)}，已删除 ${Number(payload.deleted_count ?? 0)}`
+  }
+  if (action === 'check-ban') {
+    const deleted = Number(payload.deleted_count ?? 0)
+    const invalid = Number(payload.invalid_count ?? 0)
+    const valid = Number(payload.valid_count ?? 0)
+    return deleted > 0
+      ? `检测完成，正常 ${valid}，封禁/失效 ${invalid}，已删除 ${deleted} 个账号`
+      : `检测完成，共 ${valid + invalid} 个账号均正常，无封禁`
   }
   return `上传完成，成功 ${Number(payload.success_count ?? 0)}，失败 ${Number(payload.failed_count ?? 0)}，跳过 ${Number(payload.skipped_count ?? 0)}`
 }

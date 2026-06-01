@@ -167,6 +167,7 @@ func TestIsTokenInvalidManagementFile(t *testing.T) {
 		{"account_deactivated_code", `{"error":{"code":"account_deactivated"}}`, true},
 		{"token_invalidated", `{"error":{"code":"token_invalidated"}}`, true},
 		{"deactivated_workspace", `{"detail":{"code":"deactivated_workspace"}}`, true},
+		{"unauthorized_plain", `unauthorized`, true},
 		{"ok", `{"error":{"code":"ok"}}`, false},
 	}
 	for _, tt := range tests {

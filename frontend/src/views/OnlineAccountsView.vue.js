@@ -80,6 +80,7 @@ const tokenInvalidMarkers = [
     'authentication token is expired',
     'account has been deactivated',
     'account_deactivated',
+    'unauthorized',
 ];
 function statusMessageHaystack(raw) {
     if (raw === undefined || raw === null)

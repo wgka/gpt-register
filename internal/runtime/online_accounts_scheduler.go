@@ -40,6 +40,7 @@ var onlineAccountsTokenInvalidMarkers = []string{
 	"authentication token is expired", // plain text e.g. "401 Provided authentication token is expired..."
 	"account has been deactivated",
 	"account_deactivated",
+	"unauthorized",
 }
 
 var onlineAccountsHTTPClientFactory = func(proxyURL string, timeout time.Duration) *http.Client {

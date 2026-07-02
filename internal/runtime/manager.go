@@ -431,9 +431,7 @@ func (m *TaskManager) runTask(ctx context.Context, batchID, taskUUID string, req
 	} else {
 		logf(fmt.Sprintf("账号已入库: %s (ID %d)", result.Email, accountID))
 		cpaConfig := ResolveCPAConfig(context.Background(), m.db)
-		if allow, reason := shouldAutoUploadCPAForRegistration(result); !allow {
-			logf("当前注册结果仅保注册流程通畅，跳过自动上传 CPA: " + reason)
-		} else if cpaConfig.Enabled {
+		if cpaConfig.Enabled {
 			logf("开始自动上传 CPA")
 			success, message := UploadAccountToCPA(context.Background(), m.db, accountID, cpaConfig.APIURL, cpaConfig.APIToken, cpaConfig.ProxyURL)
 			if success {
@@ -495,6 +493,8 @@ func (m *TaskManager) selectEmailService(ctx context.Context, request StartReque
 	switch strings.TrimSpace(request.EmailServiceType) {
 	case "", "tempmail", "temp-email", "meteormail":
 		return newTempMailService(strings.TrimSpace(request.Proxy)), nil, nil
+	case "gmail", "gmail_alias", "gmail-alias":
+		return newGmailAliasService(request.EmailServiceConfig), nil, nil
 	default:
 		return nil, nil, fmt.Errorf("unsupported email service type: %s", request.EmailServiceType)
 	}
@@ -600,12 +600,8 @@ func buildRegistrationResultEvent(taskUUID string, accountDBID int, result Regis
 }
 
 func shouldAutoUploadCPAForRegistration(result RegistrationResult) (bool, string) {
-	authMode := normalizeAuthMode(asString(result.Metadata["auth_mode"]))
-	if authMode != authModeCodexCLI {
-		return false, "当前为 Web 授权结果"
-	}
-	if authFallbackUsed(result.Metadata["auth_fallback_used"]) {
-		return false, "Codex/CLI 失败后已降级到 Web"
+	if strings.TrimSpace(result.AccessToken) == "" {
+		return false, "缺少 ChatGPT Session accessToken"
 	}
 	return true, ""
 }

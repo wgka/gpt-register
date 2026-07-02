@@ -39,15 +39,17 @@ type CPAConfig struct {
 }
 
 func GenerateCPATokenJSON(account *store.AccountTokens) map[string]any {
+	expiresAt := firstNonEmpty(account.ExpiresAt, cpaExtraString(account.ExtraData, "session_expires"))
 	return map[string]any{
-		"type":          "codex",
-		"email":         account.Email,
-		"expired":       formatCPAOptionalTime(account.ExpiresAt),
-		"id_token":      derefString(account.IDToken),
-		"account_id":    derefString(account.AccountID),
 		"access_token":  derefString(account.AccessToken),
-		"last_refresh":  formatCPAOptionalTime(account.LastRefresh),
+		"account_id":    derefString(account.AccountID),
+		"disabled":      false,
+		"email":         account.Email,
+		"expired":       formatCPAOptionalTime(expiresAt),
+		"id_token":      derefString(account.IDToken),
+		"last_refresh":  firstNonEmpty(formatCPAOptionalTime(account.LastRefresh), time.Now().UTC().Format(time.RFC3339)),
 		"refresh_token": derefString(account.RefreshToken),
+		"type":          "codex",
 	}
 }
 
@@ -163,7 +165,7 @@ func uploadToCPA(ctx context.Context, tokenData map[string]any, apiURL, apiToken
 	}
 
 	uploadURL := apiURL
-	filename := fmt.Sprintf("%v.json", tokenData["email"])
+	filename := fmt.Sprintf("codex-%v-free.json", tokenData["email"])
 	content, err := json.MarshalIndent(tokenData, "", "  ")
 	if err != nil {
 		return false, err.Error()
@@ -307,6 +309,13 @@ func derefString(value *string) string {
 		return ""
 	}
 	return *value
+}
+
+func cpaExtraString(extra map[string]any, key string) string {
+	if len(extra) == 0 {
+		return ""
+	}
+	return strings.TrimSpace(asString(extra[key]))
 }
 
 func firstEnv(keys ...string) string {

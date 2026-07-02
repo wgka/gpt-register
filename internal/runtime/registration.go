@@ -190,6 +190,7 @@ type tokenInfo struct {
 	RefreshToken string
 	IDToken      string
 	AccountID    string
+	ExpiresAt    string
 }
 
 type registrationEngine struct {
@@ -400,14 +401,7 @@ func (e *registrationEngine) runPrepared(ctx context.Context, mode string) Regis
 		result.Source = "login"
 		e.logf("注册接口返回 email_otp_verification，按已存在账号流程继续")
 	}
-	e.logf("密码步骤完成")
-
-	e.logf("请求发送邮箱验证码")
-	if err := e.sendVerificationCode(ctx); err != nil {
-		result.ErrorMessage = err.Error()
-		return result
-	}
-	e.logf("验证码已发送")
+	e.logf("密码步骤完成，等待密码步骤触发的邮箱验证码")
 
 	e.logf("等待邮箱验证码")
 	code, err := e.service.GetVerificationCode(ctx, e.email, e.emailInfo.ServiceID, time.Duration(e.settings.EmailCodeTimeout)*time.Second, otpPattern)
@@ -559,14 +553,7 @@ func (e *registrationEngine) runPrepared(ctx context.Context, mode string) Regis
 	result.Password = e.password
 	result.SessionToken = e.getCookieValue("https://chatgpt.com", "__Secure-next-auth.session-token")
 
-	e.logf("生成绑卡链接")
-	bindCardURL, err := GenerateBindCardLink(ctx, finalTokenInfo.AccessToken, e.proxyURL)
-	if err != nil {
-		e.logf("绑卡链接生成失败: " + err.Error())
-	} else {
-		result.BindCardURL = bindCardURL
-		e.logf("绑卡链接已生成")
-	}
+	e.logf("注册流程完成，已同步 ChatGPT Session")
 
 	result.Metadata = map[string]any{
 		"email_service":       e.service.Type(),
@@ -576,8 +563,8 @@ func (e *registrationEngine) runPrepared(ctx context.Context, mode string) Regis
 		"session_fallback":    usedSessionFallback,
 		"auth_mode":           normalizeAuthMode(e.settings.AuthMode),
 	}
-	if result.BindCardURL != "" {
-		result.Metadata["bind_card_url"] = result.BindCardURL
+	if strings.TrimSpace(finalTokenInfo.ExpiresAt) != "" {
+		result.Metadata["session_expires"] = finalTokenInfo.ExpiresAt
 	}
 	e.logf("注册流程完成")
 
@@ -883,46 +870,89 @@ func (e *registrationEngine) registerPassword(ctx context.Context) (string, stri
 	}
 	payload := map[string]string{"password": password, "username": e.email}
 	body, _ := json.Marshal(payload)
-	sentinelToken, err := e.getSentinelToken(ctx, "oauth_create_account")
-	if err != nil {
-		return "", "", fmt.Errorf("get register sentinel token failed: %w", err)
+
+	var lastErr error
+	for attempt := 1; attempt <= 3; attempt++ {
+		if attempt > 1 {
+			select {
+			case <-ctx.Done():
+				return "", "", ctx.Err()
+			case <-time.After(time.Duration(attempt) * 700 * time.Millisecond):
+			}
+		}
+
+		sentinelToken, err := e.getSentinelToken(ctx, "oauth_create_account")
+		if err != nil {
+			return "", "", fmt.Errorf("get register sentinel token failed: %w", err)
+		}
+		req, _ := http.NewRequestWithContext(ctx, http.MethodPost, "https://auth.openai.com/api/accounts/user/register", strings.NewReader(string(body)))
+		req.Header = browserHeaders(http.Header{
+			"referer":            {"https://auth.openai.com/create-account/password"},
+			"origin":             {"https://auth.openai.com"},
+			"accept":             {"application/json"},
+			"content-type":       {"application/json"},
+			"accept-language":    {"en-US,en;q=0.9"},
+			"accept-encoding":    {"gzip, deflate, br"},
+			"priority":           {"u=1, i"},
+			"sec-ch-ua":          {secCHUA()},
+			"sec-ch-ua-mobile":   {"?0"},
+			"sec-ch-ua-platform": {`"Windows"`},
+			"sec-fetch-dest":     {"empty"},
+			"sec-fetch-mode":     {"cors"},
+			"sec-fetch-site":     {"same-origin"},
+			"user-agent":         {userAgent()},
+		}, "referer", "origin", "accept", "content-type", "accept-language", "accept-encoding", "priority", "sec-ch-ua", "sec-ch-ua-mobile", "sec-ch-ua-platform", "sec-fetch-dest", "sec-fetch-mode", "sec-fetch-site", "user-agent")
+		req.Header.Set("openai-sentinel-token", sentinelToken)
+		resp, err := e.client.Do(req)
+		if err != nil {
+			lastErr = err
+			if isTransientRegistrationError(err) && attempt < 3 {
+				e.logf(fmt.Sprintf("提交密码遇到网络瞬断，重试 %d/3: %s", attempt+1, err.Error()))
+				continue
+			}
+			return "", "", err
+		}
+		respBody, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			lastErr = fmt.Errorf("register password failed: %d: %s", resp.StatusCode, strings.TrimSpace(string(respBody)))
+			if isTransientHTTPStatus(resp.StatusCode) && attempt < 3 {
+				e.logf(fmt.Sprintf("提交密码 HTTP %d，重试 %d/3", resp.StatusCode, attempt+1))
+				continue
+			}
+			return "", "", lastErr
+		}
+		var response struct {
+			Page struct {
+				Type string `json:"type"`
+			} `json:"page"`
+		}
+		if err := jsonUnmarshalResponse(respBody, &response); err != nil {
+			return password, "", nil
+		}
+		return password, strings.TrimSpace(response.Page.Type), nil
 	}
-	req, _ := http.NewRequestWithContext(ctx, http.MethodPost, "https://auth.openai.com/api/accounts/user/register", strings.NewReader(string(body)))
-	req.Header = browserHeaders(http.Header{
-		"referer":            {"https://auth.openai.com/create-account/password"},
-		"origin":             {"https://auth.openai.com"},
-		"accept":             {"application/json"},
-		"content-type":       {"application/json"},
-		"accept-language":    {"en-US,en;q=0.9"},
-		"accept-encoding":    {"gzip, deflate, br"},
-		"priority":           {"u=1, i"},
-		"sec-ch-ua":          {secCHUA()},
-		"sec-ch-ua-mobile":   {"?0"},
-		"sec-ch-ua-platform": {`"Windows"`},
-		"sec-fetch-dest":     {"empty"},
-		"sec-fetch-mode":     {"cors"},
-		"sec-fetch-site":     {"same-origin"},
-		"user-agent":         {userAgent()},
-	}, "referer", "origin", "accept", "content-type", "accept-language", "accept-encoding", "priority", "sec-ch-ua", "sec-ch-ua-mobile", "sec-ch-ua-platform", "sec-fetch-dest", "sec-fetch-mode", "sec-fetch-site", "user-agent")
-	req.Header.Set("openai-sentinel-token", sentinelToken)
-	resp, err := e.client.Do(req)
-	if err != nil {
-		return "", "", err
+	if lastErr != nil {
+		return "", "", lastErr
 	}
-	defer resp.Body.Close()
-	respBody, _ := io.ReadAll(resp.Body)
-	if resp.StatusCode != http.StatusOK {
-		return "", "", fmt.Errorf("register password failed: %d: %s", resp.StatusCode, strings.TrimSpace(string(respBody)))
+	return "", "", fmt.Errorf("register password failed")
+}
+
+func isTransientRegistrationError(err error) bool {
+	if err == nil {
+		return false
 	}
-	var response struct {
-		Page struct {
-			Type string `json:"type"`
-		} `json:"page"`
-	}
-	if err := jsonUnmarshalResponse(respBody, &response); err != nil {
-		return password, "", nil
-	}
-	return password, strings.TrimSpace(response.Page.Type), nil
+	message := strings.ToLower(err.Error())
+	return strings.Contains(message, "unexpected eof") ||
+		strings.Contains(message, "eof") ||
+		strings.Contains(message, "connection reset") ||
+		strings.Contains(message, "connection refused") ||
+		strings.Contains(message, "timeout") ||
+		strings.Contains(message, "tls handshake timeout")
+}
+
+func isTransientHTTPStatus(status int) bool {
+	return status == http.StatusBadGateway || status == http.StatusServiceUnavailable || status == http.StatusGatewayTimeout
 }
 
 func (e *registrationEngine) sendVerificationCode(ctx context.Context) error {
@@ -2217,6 +2247,11 @@ func (e *registrationEngine) getCookieValue(rawURL, name string) string {
 
 func (e *registrationEngine) initiateChatGPTSignin(ctx context.Context) error {
 	if strings.TrimSpace(e.csrfToken) == "" {
+		if err := e.fetchChatGPTCSRFToken(ctx); err != nil {
+			return fmt.Errorf("missing chatgpt csrf token: %w", err)
+		}
+	}
+	if strings.TrimSpace(e.csrfToken) == "" {
 		return fmt.Errorf("missing chatgpt csrf token")
 	}
 	e.syncDeviceCookies()
@@ -2382,12 +2417,20 @@ func (e *registrationEngine) bootstrapChatGPT(ctx context.Context) error {
 			io.Copy(io.Discard, resp.Body)
 			resp.Body.Close()
 			if resp.StatusCode == http.StatusOK {
-				if token := parseCSRFCookieValue(e.getCookieValue("https://chatgpt.com", "__Host-next-auth.csrf-token")); token != "" {
+				if token := e.chatGPTCSRFTokenFromCookies(); token != "" {
 					e.csrfToken = token
 				}
 				e.captureDeviceIDFromCookies()
 				e.syncDeviceCookies()
-				return nil
+				if strings.TrimSpace(e.csrfToken) == "" {
+					if err := e.fetchChatGPTCSRFToken(ctx); err != nil {
+						lastErr = err
+					} else if strings.TrimSpace(e.csrfToken) != "" {
+						return nil
+					}
+				} else {
+					return nil
+				}
 			}
 			lastErr = fmt.Errorf("chatgpt homepage http %d", resp.StatusCode)
 		}
@@ -2404,6 +2447,61 @@ func (e *registrationEngine) bootstrapChatGPT(ctx context.Context) error {
 		return lastErr
 	}
 	return fmt.Errorf("chatgpt homepage bootstrap failed")
+}
+
+func (e *registrationEngine) fetchChatGPTCSRFToken(ctx context.Context) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://chatgpt.com/api/auth/csrf", nil)
+	if err != nil {
+		return err
+	}
+	req.Header = browserHeaders(http.Header{
+		"accept":             {"application/json"},
+		"accept-language":    {"en-US,en;q=0.9"},
+		"accept-encoding":    {"gzip, deflate, br"},
+		"referer":            {"https://chatgpt.com/"},
+		"sec-ch-ua":          {secCHUA()},
+		"sec-ch-ua-mobile":   {"?0"},
+		"sec-ch-ua-platform": {`"Windows"`},
+		"sec-fetch-dest":     {"empty"},
+		"sec-fetch-mode":     {"cors"},
+		"sec-fetch-site":     {"same-origin"},
+		"user-agent":         {userAgent()},
+	}, "accept", "accept-language", "accept-encoding", "referer", "sec-ch-ua", "sec-ch-ua-mobile", "sec-ch-ua-platform", "sec-fetch-dest", "sec-fetch-mode", "sec-fetch-site", "user-agent")
+
+	resp, err := e.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("chatgpt csrf http %d: %s", resp.StatusCode, bodySnippet(body, 160))
+	}
+
+	var payload struct {
+		CSRFToken string `json:"csrfToken"`
+	}
+	if err := jsonUnmarshalResponse(body, &payload); err != nil {
+		return err
+	}
+	if token := strings.TrimSpace(payload.CSRFToken); token != "" {
+		e.csrfToken = token
+		return nil
+	}
+	if token := e.chatGPTCSRFTokenFromCookies(); token != "" {
+		e.csrfToken = token
+		return nil
+	}
+	return fmt.Errorf("chatgpt csrf response missing token")
+}
+
+func (e *registrationEngine) chatGPTCSRFTokenFromCookies() string {
+	for _, name := range []string{"__Host-next-auth.csrf-token", "authjs.csrf-token", "next-auth.csrf-token"} {
+		if token := parseCSRFCookieValue(e.getCookieValue("https://chatgpt.com", name)); token != "" {
+			return token
+		}
+	}
+	return ""
 }
 
 func (e *registrationEngine) syncDeviceCookies() {
@@ -2488,6 +2586,10 @@ func extractTokenInfoFromChatGPTSession(body []byte) (tokenInfo, string, error) 
 		RefreshToken: firstNonEmpty(asString(raw["refreshToken"]), asString(raw["refresh_token"])),
 		IDToken:      firstNonEmpty(asString(raw["idToken"]), asString(raw["id_token"])),
 	}
+	if parsed, err := time.Parse(time.RFC3339, strings.TrimSpace(asString(raw["expires"]))); err == nil {
+		info.ExpiresAt = parsed.UTC().Format(time.RFC3339)
+	}
+
 	if strings.TrimSpace(info.AccessToken) == "" {
 		return tokenInfo{}, "", fmt.Errorf("session payload missing accessToken")
 	}

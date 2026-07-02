@@ -19,6 +19,12 @@
 
         <el-form class="launch-form" label-position="top" @submit.prevent>
           <div class="launch-fields">
+            <el-form-item label="邮箱服务">
+              <el-select v-model="form.email_service_type" placeholder="请选择邮箱服务">
+                <el-option label="Gmail 别名" value="gmail_alias" />
+                <el-option label="临时邮箱" value="tempmail" />
+              </el-select>
+            </el-form-item>
             <el-form-item label="数量">
               <el-input-number v-model="form.count" :min="1" controls-position="right" />
             </el-form-item>
@@ -170,6 +176,7 @@ const registrationStats = reactive<RegistrationStats>({
   today_count: 0,
 })
 const form = reactive({
+  email_service_type: 'gmail_alias',
   count: 1,
   concurrency: 1,
   interval_min: 5,
@@ -226,7 +233,7 @@ async function startRegistration() {
         concurrency: form.concurrency,
         interval_min: form.interval_min,
         interval_max: form.interval_max,
-        email_service_type: 'tempmail',
+        email_service_type: form.email_service_type,
       }),
     })
     if (!response.ok) {

@@ -467,7 +467,10 @@ const statusOptions = [
   { label: '失败', value: 'failed' },
 ]
 
-const serviceOptions = [{ label: '临时邮箱', value: 'tempmail' }]
+const serviceOptions = [
+  { label: '临时邮箱', value: 'tempmail' },
+  { label: 'Gmail 别名', value: 'gmail_alias' },
+]
 const refreshTokenOptions = [
   { label: '有 Refresh Token', value: 'has' },
   { label: '无 Refresh Token', value: 'none' },
@@ -858,6 +861,9 @@ function statusTagType(status: string) {
 function serviceLabel(service: string) {
   if (service === 'tempmail' || service === 'temp-email' || service === 'meteormail') {
     return '临时邮箱'
+  }
+  if (service === 'gmail_alias' || service === 'gmail' || service === 'gmail-alias') {
+    return 'Gmail 别名'
   }
   return service || '-'
 }

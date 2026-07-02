@@ -12,6 +12,7 @@ const registrationStats = reactive({
     today_count: 0,
 });
 const form = reactive({
+    email_service_type: 'gmail_alias',
     count: 1,
     concurrency: 1,
     interval_min: 5,
@@ -65,7 +66,7 @@ async function startRegistration() {
                 concurrency: form.concurrency,
                 interval_min: form.interval_min,
                 interval_max: form.interval_max,
-                email_service_type: 'tempmail',
+                email_service_type: form.email_service_type,
             }),
         });
         if (!response.ok) {
@@ -402,68 +403,64 @@ let __VLS_29;
 elFormItem;
 // @ts-ignore
 const __VLS_30 = __VLS_asFunctionalComponent1(__VLS_29, new __VLS_29({
-    label: "数量",
+    label: "邮箱服务",
 }));
 const __VLS_31 = __VLS_30({
-    label: "数量",
+    label: "邮箱服务",
 }, ...__VLS_functionalComponentArgsRest(__VLS_30));
 const { default: __VLS_34 } = __VLS_32.slots;
 let __VLS_35;
-/** @ts-ignore @type {typeof __VLS_components.elInputNumber | typeof __VLS_components.ElInputNumber} */
-elInputNumber;
+/** @ts-ignore @type {typeof __VLS_components.elSelect | typeof __VLS_components.ElSelect | typeof __VLS_components.elSelect | typeof __VLS_components.ElSelect} */
+elSelect;
 // @ts-ignore
 const __VLS_36 = __VLS_asFunctionalComponent1(__VLS_35, new __VLS_35({
-    modelValue: (__VLS_ctx.form.count),
-    min: (1),
-    controlsPosition: "right",
+    modelValue: (__VLS_ctx.form.email_service_type),
+    placeholder: "请选择邮箱服务",
 }));
 const __VLS_37 = __VLS_36({
-    modelValue: (__VLS_ctx.form.count),
-    min: (1),
-    controlsPosition: "right",
+    modelValue: (__VLS_ctx.form.email_service_type),
+    placeholder: "请选择邮箱服务",
 }, ...__VLS_functionalComponentArgsRest(__VLS_36));
+const { default: __VLS_40 } = __VLS_38.slots;
+let __VLS_41;
+/** @ts-ignore @type {typeof __VLS_components.elOption | typeof __VLS_components.ElOption} */
+elOption;
 // @ts-ignore
-[form,];
-var __VLS_32;
-let __VLS_40;
-/** @ts-ignore @type {typeof __VLS_components.elFormItem | typeof __VLS_components.ElFormItem | typeof __VLS_components.elFormItem | typeof __VLS_components.ElFormItem} */
-elFormItem;
-// @ts-ignore
-const __VLS_41 = __VLS_asFunctionalComponent1(__VLS_40, new __VLS_40({
-    label: "并发数",
+const __VLS_42 = __VLS_asFunctionalComponent1(__VLS_41, new __VLS_41({
+    label: "Gmail 别名",
+    value: "gmail_alias",
 }));
-const __VLS_42 = __VLS_41({
-    label: "并发数",
-}, ...__VLS_functionalComponentArgsRest(__VLS_41));
-const { default: __VLS_45 } = __VLS_43.slots;
+const __VLS_43 = __VLS_42({
+    label: "Gmail 别名",
+    value: "gmail_alias",
+}, ...__VLS_functionalComponentArgsRest(__VLS_42));
 let __VLS_46;
-/** @ts-ignore @type {typeof __VLS_components.elInputNumber | typeof __VLS_components.ElInputNumber} */
-elInputNumber;
+/** @ts-ignore @type {typeof __VLS_components.elOption | typeof __VLS_components.ElOption} */
+elOption;
 // @ts-ignore
 const __VLS_47 = __VLS_asFunctionalComponent1(__VLS_46, new __VLS_46({
-    modelValue: (__VLS_ctx.form.concurrency),
-    min: (1),
-    max: (Math.min(20, __VLS_ctx.form.count)),
-    controlsPosition: "right",
+    label: "临时邮箱",
+    value: "tempmail",
 }));
 const __VLS_48 = __VLS_47({
-    modelValue: (__VLS_ctx.form.concurrency),
-    min: (1),
-    max: (Math.min(20, __VLS_ctx.form.count)),
-    controlsPosition: "right",
+    label: "临时邮箱",
+    value: "tempmail",
 }, ...__VLS_functionalComponentArgsRest(__VLS_47));
 // @ts-ignore
-[form, form,];
-var __VLS_43;
+[form,];
+var __VLS_38;
+// @ts-ignore
+[];
+var __VLS_32;
 let __VLS_51;
 /** @ts-ignore @type {typeof __VLS_components.elFormItem | typeof __VLS_components.ElFormItem | typeof __VLS_components.elFormItem | typeof __VLS_components.ElFormItem} */
 elFormItem;
 // @ts-ignore
 const __VLS_52 = __VLS_asFunctionalComponent1(__VLS_51, new __VLS_51({
-    label: "最小间隔（秒）",
+    label: "数量",
 }));
 const __VLS_53 = __VLS_52({
-    label: "最小间隔（秒）",
+    label: "数量",
 }, ...__VLS_functionalComponentArgsRest(__VLS_52));
 const { default: __VLS_56 } = __VLS_54.slots;
 let __VLS_57;
@@ -471,15 +468,13 @@ let __VLS_57;
 elInputNumber;
 // @ts-ignore
 const __VLS_58 = __VLS_asFunctionalComponent1(__VLS_57, new __VLS_57({
-    modelValue: (__VLS_ctx.form.interval_min),
-    min: (0),
-    max: (3600),
+    modelValue: (__VLS_ctx.form.count),
+    min: (1),
     controlsPosition: "right",
 }));
 const __VLS_59 = __VLS_58({
-    modelValue: (__VLS_ctx.form.interval_min),
-    min: (0),
-    max: (3600),
+    modelValue: (__VLS_ctx.form.count),
+    min: (1),
     controlsPosition: "right",
 }, ...__VLS_functionalComponentArgsRest(__VLS_58));
 // @ts-ignore
@@ -490,10 +485,10 @@ let __VLS_62;
 elFormItem;
 // @ts-ignore
 const __VLS_63 = __VLS_asFunctionalComponent1(__VLS_62, new __VLS_62({
-    label: "最大间隔（秒）",
+    label: "并发数",
 }));
 const __VLS_64 = __VLS_63({
-    label: "最大间隔（秒）",
+    label: "并发数",
 }, ...__VLS_functionalComponentArgsRest(__VLS_63));
 const { default: __VLS_67 } = __VLS_65.slots;
 let __VLS_68;
@@ -501,94 +496,154 @@ let __VLS_68;
 elInputNumber;
 // @ts-ignore
 const __VLS_69 = __VLS_asFunctionalComponent1(__VLS_68, new __VLS_68({
+    modelValue: (__VLS_ctx.form.concurrency),
+    min: (1),
+    max: (Math.min(20, __VLS_ctx.form.count)),
+    controlsPosition: "right",
+}));
+const __VLS_70 = __VLS_69({
+    modelValue: (__VLS_ctx.form.concurrency),
+    min: (1),
+    max: (Math.min(20, __VLS_ctx.form.count)),
+    controlsPosition: "right",
+}, ...__VLS_functionalComponentArgsRest(__VLS_69));
+// @ts-ignore
+[form, form,];
+var __VLS_65;
+let __VLS_73;
+/** @ts-ignore @type {typeof __VLS_components.elFormItem | typeof __VLS_components.ElFormItem | typeof __VLS_components.elFormItem | typeof __VLS_components.ElFormItem} */
+elFormItem;
+// @ts-ignore
+const __VLS_74 = __VLS_asFunctionalComponent1(__VLS_73, new __VLS_73({
+    label: "最小间隔（秒）",
+}));
+const __VLS_75 = __VLS_74({
+    label: "最小间隔（秒）",
+}, ...__VLS_functionalComponentArgsRest(__VLS_74));
+const { default: __VLS_78 } = __VLS_76.slots;
+let __VLS_79;
+/** @ts-ignore @type {typeof __VLS_components.elInputNumber | typeof __VLS_components.ElInputNumber} */
+elInputNumber;
+// @ts-ignore
+const __VLS_80 = __VLS_asFunctionalComponent1(__VLS_79, new __VLS_79({
+    modelValue: (__VLS_ctx.form.interval_min),
+    min: (0),
+    max: (3600),
+    controlsPosition: "right",
+}));
+const __VLS_81 = __VLS_80({
+    modelValue: (__VLS_ctx.form.interval_min),
+    min: (0),
+    max: (3600),
+    controlsPosition: "right",
+}, ...__VLS_functionalComponentArgsRest(__VLS_80));
+// @ts-ignore
+[form,];
+var __VLS_76;
+let __VLS_84;
+/** @ts-ignore @type {typeof __VLS_components.elFormItem | typeof __VLS_components.ElFormItem | typeof __VLS_components.elFormItem | typeof __VLS_components.ElFormItem} */
+elFormItem;
+// @ts-ignore
+const __VLS_85 = __VLS_asFunctionalComponent1(__VLS_84, new __VLS_84({
+    label: "最大间隔（秒）",
+}));
+const __VLS_86 = __VLS_85({
+    label: "最大间隔（秒）",
+}, ...__VLS_functionalComponentArgsRest(__VLS_85));
+const { default: __VLS_89 } = __VLS_87.slots;
+let __VLS_90;
+/** @ts-ignore @type {typeof __VLS_components.elInputNumber | typeof __VLS_components.ElInputNumber} */
+elInputNumber;
+// @ts-ignore
+const __VLS_91 = __VLS_asFunctionalComponent1(__VLS_90, new __VLS_90({
     modelValue: (__VLS_ctx.form.interval_max),
     min: (0),
     max: (3600),
     controlsPosition: "right",
 }));
-const __VLS_70 = __VLS_69({
+const __VLS_92 = __VLS_91({
     modelValue: (__VLS_ctx.form.interval_max),
     min: (0),
     max: (3600),
     controlsPosition: "right",
-}, ...__VLS_functionalComponentArgsRest(__VLS_69));
+}, ...__VLS_functionalComponentArgsRest(__VLS_91));
 // @ts-ignore
 [form,];
-var __VLS_65;
+var __VLS_87;
 __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
     ...{ class: "form-actions" },
 });
 /** @type {__VLS_StyleScopedClasses['form-actions']} */ ;
-let __VLS_73;
+let __VLS_95;
 /** @ts-ignore @type {typeof __VLS_components.elButton | typeof __VLS_components.ElButton | typeof __VLS_components.elButton | typeof __VLS_components.ElButton} */
 elButton;
 // @ts-ignore
-const __VLS_74 = __VLS_asFunctionalComponent1(__VLS_73, new __VLS_73({
+const __VLS_96 = __VLS_asFunctionalComponent1(__VLS_95, new __VLS_95({
     ...{ 'onClick': {} },
     ...{ class: "action-btn" },
     type: "primary",
     loading: (__VLS_ctx.starting),
 }));
-const __VLS_75 = __VLS_74({
+const __VLS_97 = __VLS_96({
     ...{ 'onClick': {} },
     ...{ class: "action-btn" },
     type: "primary",
     loading: (__VLS_ctx.starting),
-}, ...__VLS_functionalComponentArgsRest(__VLS_74));
-let __VLS_78;
-const __VLS_79 = ({ click: {} },
+}, ...__VLS_functionalComponentArgsRest(__VLS_96));
+let __VLS_100;
+const __VLS_101 = ({ click: {} },
     { onClick: (__VLS_ctx.startRegistration) });
 /** @type {__VLS_StyleScopedClasses['action-btn']} */ ;
-const { default: __VLS_80 } = __VLS_76.slots;
+const { default: __VLS_102 } = __VLS_98.slots;
 // @ts-ignore
 [starting, startRegistration,];
-var __VLS_76;
-var __VLS_77;
-let __VLS_81;
+var __VLS_98;
+var __VLS_99;
+let __VLS_103;
 /** @ts-ignore @type {typeof __VLS_components.elButton | typeof __VLS_components.ElButton | typeof __VLS_components.elButton | typeof __VLS_components.ElButton} */
 elButton;
 // @ts-ignore
-const __VLS_82 = __VLS_asFunctionalComponent1(__VLS_81, new __VLS_81({
+const __VLS_104 = __VLS_asFunctionalComponent1(__VLS_103, new __VLS_103({
     ...{ 'onClick': {} },
     ...{ class: "action-btn" },
     type: "danger",
     plain: true,
     disabled: (!__VLS_ctx.socket || !__VLS_ctx.canCancel),
 }));
-const __VLS_83 = __VLS_82({
+const __VLS_105 = __VLS_104({
     ...{ 'onClick': {} },
     ...{ class: "action-btn" },
     type: "danger",
     plain: true,
     disabled: (!__VLS_ctx.socket || !__VLS_ctx.canCancel),
-}, ...__VLS_functionalComponentArgsRest(__VLS_82));
-let __VLS_86;
-const __VLS_87 = ({ click: {} },
+}, ...__VLS_functionalComponentArgsRest(__VLS_104));
+let __VLS_108;
+const __VLS_109 = ({ click: {} },
     { onClick: (__VLS_ctx.cancelRegistration) });
 /** @type {__VLS_StyleScopedClasses['action-btn']} */ ;
-const { default: __VLS_88 } = __VLS_84.slots;
+const { default: __VLS_110 } = __VLS_106.slots;
 // @ts-ignore
 [socket, canCancel, cancelRegistration,];
-var __VLS_84;
-var __VLS_85;
+var __VLS_106;
+var __VLS_107;
 // @ts-ignore
 [];
 var __VLS_24;
 var __VLS_25;
-let __VLS_89;
+let __VLS_111;
 /** @ts-ignore @type {typeof __VLS_components.elDivider | typeof __VLS_components.ElDivider | typeof __VLS_components.elDivider | typeof __VLS_components.ElDivider} */
 elDivider;
 // @ts-ignore
-const __VLS_90 = __VLS_asFunctionalComponent1(__VLS_89, new __VLS_89({
+const __VLS_112 = __VLS_asFunctionalComponent1(__VLS_111, new __VLS_111({
     contentPosition: "left",
 }));
-const __VLS_91 = __VLS_90({
+const __VLS_113 = __VLS_112({
     contentPosition: "left",
-}, ...__VLS_functionalComponentArgsRest(__VLS_90));
-const { default: __VLS_94 } = __VLS_92.slots;
+}, ...__VLS_functionalComponentArgsRest(__VLS_112));
+const { default: __VLS_116 } = __VLS_114.slots;
 // @ts-ignore
 [];
-var __VLS_92;
+var __VLS_114;
 if (__VLS_ctx.recentResults.length === 0) {
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
         ...{ class: "result-empty" },
@@ -618,24 +673,24 @@ else {
         });
         /** @type {__VLS_StyleScopedClasses['result-card__meta']} */ ;
         (item.source === 'login' ? '已存在账号登录' : '新注册账号');
-        let __VLS_95;
+        let __VLS_117;
         /** @ts-ignore @type {typeof __VLS_components.elButton | typeof __VLS_components.ElButton | typeof __VLS_components.elButton | typeof __VLS_components.ElButton} */
         elButton;
         // @ts-ignore
-        const __VLS_96 = __VLS_asFunctionalComponent1(__VLS_95, new __VLS_95({
+        const __VLS_118 = __VLS_asFunctionalComponent1(__VLS_117, new __VLS_117({
             ...{ 'onClick': {} },
             link: true,
             type: "primary",
             disabled: (!item.bind_card_url),
         }));
-        const __VLS_97 = __VLS_96({
+        const __VLS_119 = __VLS_118({
             ...{ 'onClick': {} },
             link: true,
             type: "primary",
             disabled: (!item.bind_card_url),
-        }, ...__VLS_functionalComponentArgsRest(__VLS_96));
-        let __VLS_100;
-        const __VLS_101 = ({ click: {} },
+        }, ...__VLS_functionalComponentArgsRest(__VLS_118));
+        let __VLS_122;
+        const __VLS_123 = ({ click: {} },
             { onClick: (...[$event]) => {
                     if (!!(__VLS_ctx.recentResults.length === 0))
                         return;
@@ -643,11 +698,11 @@ else {
                     // @ts-ignore
                     [recentResults, recentResults, copyValue,];
                 } });
-        const { default: __VLS_102 } = __VLS_98.slots;
+        const { default: __VLS_124 } = __VLS_120.slots;
         // @ts-ignore
         [];
-        var __VLS_98;
-        var __VLS_99;
+        var __VLS_120;
+        var __VLS_121;
         __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
             ...{ class: "result-row" },
         });
@@ -674,23 +729,23 @@ else {
 // @ts-ignore
 [];
 var __VLS_11;
-let __VLS_103;
+let __VLS_125;
 /** @ts-ignore @type {typeof __VLS_components.elCard | typeof __VLS_components.ElCard | typeof __VLS_components.elCard | typeof __VLS_components.ElCard} */
 elCard;
 // @ts-ignore
-const __VLS_104 = __VLS_asFunctionalComponent1(__VLS_103, new __VLS_103({
+const __VLS_126 = __VLS_asFunctionalComponent1(__VLS_125, new __VLS_125({
     ...{ class: "page-card log-card" },
     shadow: "never",
 }));
-const __VLS_105 = __VLS_104({
+const __VLS_127 = __VLS_126({
     ...{ class: "page-card log-card" },
     shadow: "never",
-}, ...__VLS_functionalComponentArgsRest(__VLS_104));
+}, ...__VLS_functionalComponentArgsRest(__VLS_126));
 /** @type {__VLS_StyleScopedClasses['page-card']} */ ;
 /** @type {__VLS_StyleScopedClasses['log-card']} */ ;
-const { default: __VLS_108 } = __VLS_106.slots;
+const { default: __VLS_130 } = __VLS_128.slots;
 {
-    const { header: __VLS_109 } = __VLS_106.slots;
+    const { header: __VLS_131 } = __VLS_128.slots;
     __VLS_asFunctionalElement1(__VLS_intrinsics.div, __VLS_intrinsics.div)({
         ...{ class: "section-header" },
     });
@@ -703,36 +758,36 @@ const { default: __VLS_108 } = __VLS_106.slots;
         ...{ class: "status-bar" },
     });
     /** @type {__VLS_StyleScopedClasses['status-bar']} */ ;
-    let __VLS_110;
+    let __VLS_132;
     /** @ts-ignore @type {typeof __VLS_components.elTag | typeof __VLS_components.ElTag | typeof __VLS_components.elTag | typeof __VLS_components.ElTag} */
     elTag;
     // @ts-ignore
-    const __VLS_111 = __VLS_asFunctionalComponent1(__VLS_110, new __VLS_110({
+    const __VLS_133 = __VLS_asFunctionalComponent1(__VLS_132, new __VLS_132({
         type: (__VLS_ctx.statusTagType(__VLS_ctx.current.status)),
     }));
-    const __VLS_112 = __VLS_111({
+    const __VLS_134 = __VLS_133({
         type: (__VLS_ctx.statusTagType(__VLS_ctx.current.status)),
-    }, ...__VLS_functionalComponentArgsRest(__VLS_111));
-    const { default: __VLS_115 } = __VLS_113.slots;
+    }, ...__VLS_functionalComponentArgsRest(__VLS_133));
+    const { default: __VLS_137 } = __VLS_135.slots;
     (__VLS_ctx.current.status || '-');
     // @ts-ignore
     [statusTagType, current, current,];
-    var __VLS_113;
-    let __VLS_116;
+    var __VLS_135;
+    let __VLS_138;
     /** @ts-ignore @type {typeof __VLS_components.elTag | typeof __VLS_components.ElTag | typeof __VLS_components.elTag | typeof __VLS_components.ElTag} */
     elTag;
     // @ts-ignore
-    const __VLS_117 = __VLS_asFunctionalComponent1(__VLS_116, new __VLS_116({
+    const __VLS_139 = __VLS_asFunctionalComponent1(__VLS_138, new __VLS_138({
         type: (__VLS_ctx.websocketTagType),
     }));
-    const __VLS_118 = __VLS_117({
+    const __VLS_140 = __VLS_139({
         type: (__VLS_ctx.websocketTagType),
-    }, ...__VLS_functionalComponentArgsRest(__VLS_117));
-    const { default: __VLS_121 } = __VLS_119.slots;
+    }, ...__VLS_functionalComponentArgsRest(__VLS_139));
+    const { default: __VLS_143 } = __VLS_141.slots;
     (__VLS_ctx.websocketState);
     // @ts-ignore
     [websocketTagType, websocketState,];
-    var __VLS_119;
+    var __VLS_141;
     // @ts-ignore
     [];
 }
@@ -806,7 +861,7 @@ else {
 }
 // @ts-ignore
 [];
-var __VLS_106;
+var __VLS_128;
 // @ts-ignore
 [];
 const __VLS_export = (await import('vue')).defineComponent({});

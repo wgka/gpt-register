@@ -35,6 +35,11 @@ func (a *apiServer) handleEmailServiceTypes(w http.ResponseWriter, req *http.Req
 				"label":       "临时邮箱",
 				"description": "调用临时邮箱 API 自动生成邮箱并读取最新验证码",
 			},
+			{
+				"value":       "gmail_alias",
+				"label":       "Gmail 别名",
+				"description": "调用 Gmail 别名 API 生成点号/加号别名并读取验证码",
+			},
 		},
 	})
 }
